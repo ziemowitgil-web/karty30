@@ -128,7 +128,7 @@
         }
 
         function submitDraft(){
-            document.querySelector('input[name="status"]').value = 'draft';
+            document.qubladerySelector('input[name="status"]').value = 'draft';
             document.getElementById('consultationForm').submit();
         }
     </script>
