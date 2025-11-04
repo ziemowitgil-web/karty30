@@ -31,7 +31,7 @@ class ClientController extends Controller
             }
         }
 
-        return view('client.index', compact('clients'));
+        return view('Client.index', compact('clients'));
     }
 
     /**
@@ -41,7 +41,7 @@ class ClientController extends Controller
      */
     public function create()
     {
-        return view('client.create');
+        return view('Client.create');
     }
 
     /**
