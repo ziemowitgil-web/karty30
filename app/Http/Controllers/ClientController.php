@@ -15,7 +15,7 @@ class ClientController extends Controller
     // =========================================================
 
     /**
-     * Display a listing of clients.
+     * Wyświetla listę wszystkich klientów.
      *
      * @return \Illuminate\View\View
      */
@@ -24,7 +24,6 @@ class ClientController extends Controller
         $clients = Client::all();
 
         foreach ($clients as $client) {
-            // Jeśli klient ma przynajmniej jedną konsultację w systemie
             $hasSchedule = Schedule::where('client_id', $client->id)->exists();
             if ($hasSchedule) {
                 $client->status = 'ready';
@@ -35,7 +34,7 @@ class ClientController extends Controller
     }
 
     /**
-     * Show the form for creating a new client.
+     * Wyświetla formularz tworzenia nowego klienta.
      *
      * @return \Illuminate\View\View
      */
@@ -45,17 +44,15 @@ class ClientController extends Controller
     }
 
     /**
-     * Store a newly created client in storage.
+     * Zapisuje nowego klienta w bazie danych.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
-        // Podstawowy email, jeśli nie podano
         $email = $request->email ?: 'test@example.com';
 
-        // Walidacja podstawowych pól
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:clients,email',
@@ -67,7 +64,6 @@ class ClientController extends Controller
 
         $validated['email'] = $email;
 
-        // Pola opcjonalne
         $optionalFields = [
             'phone', 'status', 'problem', 'equipment', 'date_of_birth',
             'gender', 'address', 'notes', 'consent', 'preferred_contact_method',
@@ -80,7 +76,6 @@ class ClientController extends Controller
 
         $validated['consent'] = $request->has('consent');
 
-        // JSON dla dostępności
         if ($validated['available_days']) {
             $validated['available_days'] = json_encode($validated['available_days']);
         }
@@ -96,14 +91,14 @@ class ClientController extends Controller
             ->causedBy(auth()->user())
             ->log('Dodano nowego klienta');
 
-        return redirect()->route('clients.index')
+        return redirect()->route('Clients.index')
             ->with('success', 'Klient został dodany w systemie TyfloKonsultacje. Jest widoczny natychmiast, natomiast w CRM będzie widoczny za kilka godzin.');
     }
 
     /**
-     * Show the form for editing the specified client.
+     * Wyświetla formularz edycji danych klienta.
      *
-     * @param  \App\Models\Client  $client
+     * @param \App\Models\Client $client
      * @return \Illuminate\View\View
      */
     public function edit(Client $client)
@@ -111,14 +106,14 @@ class ClientController extends Controller
         $client->available_days = $client->available_days ? implode(', ', json_decode($client->available_days)) : '';
         $client->time_slots = $client->time_slots ? implode(', ', json_decode($client->time_slots)) : '';
 
-        return view('client.edit', compact('client'));
+        return view('Client.edit', compact('client'));
     }
 
     /**
-     * Update the specified client in storage.
+     * Aktualizuje dane klienta w bazie danych.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Client  $client
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Client $client
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, Client $client)
@@ -155,13 +150,13 @@ class ClientController extends Controller
             ->causedBy(auth()->user())
             ->log('Zaktualizowano dane klienta');
 
-        return redirect()->route('clients.index')->with('success', 'Dane klienta zostały zaktualizowane.');
+        return redirect()->route('Clients.index')->with('success', 'Dane klienta zostały zaktualizowane.');
     }
 
     /**
-     * Remove the specified client from storage.
+     * Usuwa klienta z bazy danych.
      *
-     * @param  \App\Models\Client  $client
+     * @param \App\Models\Client $client
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(Client $client)
@@ -173,7 +168,7 @@ class ClientController extends Controller
             ->causedBy(auth()->user())
             ->log('Usunięto klienta');
 
-        return redirect()->route('clients.index')->with('success', 'Klient został pomyślnie usunięty.');
+        return redirect()->route('Clients.index')->with('success', 'Klient został pomyślnie usunięty.');
     }
 
     // =========================================================
@@ -181,9 +176,9 @@ class ClientController extends Controller
     // =========================================================
 
     /**
-     * Print client documents as PDF.
+     * Generuje PDF z dokumentami klienta.
      *
-     * @param  \App\Models\Client  $client
+     * @param \App\Models\Client $client
      * @return \Mpdf\Mpdf
      */
     public function printDocuments(Client $client)
@@ -197,11 +192,11 @@ class ClientController extends Controller
             'margin_bottom' => 20,
         ]);
 
-        $html = view('pdf.client', compact('client'))->render();
+        $html = view('Client.pdf', compact('client'))->render();
         $mpdf->WriteHTML($html);
 
         $fileName = 'Karta_' . str_replace(' ', '_', $client->name) . '.pdf';
-        return $mpdf->Output($fileName, 'D'); // D = download
+        return $mpdf->Output($fileName, 'D');
     }
 
     // =========================================================
@@ -209,19 +204,18 @@ class ClientController extends Controller
     // =========================================================
 
     /**
-     * Display detailed information for the specified client.
+     * Wyświetla szczegółowe informacje o kliencie.
      *
-     * @param  \App\Models\Client  $client
+     * @param \App\Models\Client $client
      * @return \Illuminate\View\View
      */
     public function details(Client $client)
     {
         $client->load([
-            'activities.causer',  // Historia zmian
-            'schedules',          // Powiązane terminy
+            'activities.causer',
+            'schedules',
         ]);
 
-        // Parsowanie dostępnych dni + slotów godzinowych
         $days_slots = $client->days_slots ? json_decode($client->days_slots, true) : [];
 
         return view('Client.details', compact('client', 'days_slots'));
@@ -232,7 +226,7 @@ class ClientController extends Controller
     // =========================================================
 
     /**
-     * Export the list of clients to XLS.
+     * Eksportuje listę klientów do pliku XLS.
      *
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
