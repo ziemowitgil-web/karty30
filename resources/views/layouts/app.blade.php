@@ -4,13 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Karty 3.0 ') }}</title>
+    <title>{{ config('app.name', 'Karty 3.0') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         function toggleMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
             menu.classList.toggle('block');
+        }
+
+        function toggleMobileSubmenu(id) {
+            const submenu = document.getElementById(id);
+            submenu.classList.toggle('hidden');
         }
     </script>
     {!! CookieConsent::styles() !!}
@@ -39,22 +44,29 @@
 
                 @unless($accessible)
                     <a href="{{ route('clients.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Klienci</a>
-                    <a href="{{ route('raport') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Raporty</a>
-                @endunless
 
-                <!-- Admin dropdown -->
-                @if(auth()->user()->is_admin ?? true)
+                    <!-- Raporty z rozwijanym menu -->
                     <div class="relative group">
                         <button class="px-4 py-2 rounded hover:bg-gray-700 flex items-center space-x-1 transition">
-                            Admin
+                            Raporty
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <div class="absolute left-0 mt-1 w-40 bg-gray-800 rounded shadow-lg hidden group-hover:block z-50">
-                            <a href="{{ route('logs') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Logi</a>
+                        <div class="absolute left-0 mt-1 w-64 bg-gray-800 rounded shadow-lg hidden group-hover:block z-50">
+                            <a href="{{ route('raport') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Podsumowanie</a>
+                            <a href="{{ route('raports.cancelled') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Odwołane rezerwacje</a>
+                            <a href="{{ route('raports.blacklist') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Czarna lista</a>
+                            <a href="{{ route('raports.approvedThisMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Konsultacje zatwierdzone w tym miesiącu</a>
+                            <a href="{{ route('raports.approvedLastMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Konsultacje zatwierdzone w poprzednim miesiącu</a>
+                            <a href="{{ route('raports.monthlyReportMRPIPS') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Raport MRPiPS</a>
+                            <a href="{{ route('raports.monthlyReportMRPIPS.email') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Wyślij raport MRPiPS</a>
                         </div>
                     </div>
+                @endunless
+
+                @if(auth()->user()->is_admin ?? true)
+                    <a href="{{ route('logs') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Logi</a>
                 @endif
 
                 <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-4 py-2 rounded hover:bg-gray-700 transition">Wyloguj</a>
@@ -63,9 +75,6 @@
 
             @guest
                 <a href="{{ route('login') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Logowanie</a>
-                @if(env('APP_LICENSE') && !$accessible)
-                    <span class="text-gray-300 text-xs ml-2"></span>
-                @endif
             @endguest
         </nav>
 
@@ -89,7 +98,23 @@
 
             @unless($accessible)
                 <a href="{{ route('clients.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Klienci</a>
-                <a href="{{ route('raport') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Raporty</a>
+
+                <!-- Raporty z rozwijanym submenu -->
+                <button onclick="toggleMobileSubmenu('mobile-raporty')" class="w-full text-left px-4 py-2 rounded hover:bg-gray-700 flex justify-between items-center">
+                    Raporty
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div id="mobile-raporty" class="hidden pl-4">
+                    <a href="{{ route('raport') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Podsumowanie</a>
+                    <a href="{{ route('raports.cancelled') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Odwołane rezerwacje</a>
+                    <a href="{{ route('raports.blacklist') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Czarna lista</a>
+                    <a href="{{ route('raports.approvedThisMonth') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Konsultacje zatwierdzone w tym miesiącu</a>
+                    <a href="{{ route('raports.approvedLastMonth') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Konsultacje zatwierdzone w poprzednim miesiącu</a>
+                    <a href="{{ route('raports.monthlyReportMRPIPS') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Raport MRPiPS</a>
+                    <a href="{{ route('raports.monthlyReportMRPIPS.email') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Wyślij raport MRPiPS</a>
+                </div>
             @endunless
 
             @if(auth()->user()->is_admin ?? true)
@@ -114,22 +139,26 @@
 <!-- Footer -->
 <footer class="bg-gray-900 text-gray-300 py-6 mt-auto">
     <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0 text-center md:text-left">
-        <div class="text-sm text-white">&copy; {{ date('Y') }} {{ config('app.name', 'Laravel') }}   <div class="text-xs text-gray-400">{{ env('APP_VERSION') }}</div>
+        <div class="text-sm text-white">
+            &copy; {{ date('Y') }} {{ config('app.name', 'Laravel') }}
+            <div class="text-xs text-gray-400">{{ env('APP_VERSION') }}</div>
         </div>
+
         @unless($accessible)
             @if(env('APP_LICENSE'))
+                <!-- Możesz tu dodać informację o licencji -->
             @endif
         @endunless
+
         <div class="px-2 py-1 rounded text-xs font-semibold {{ match(env('APP_ENV', 'local')) {
             'production' => 'bg-green-600',
             'local' => 'bg-yellow-500',
             'staging' => 'bg-orange-500',
             default => 'bg-gray-500',
-        } }} text-white">{{ strtoupper(env('APP_ENV', 'LOCAL')) }} <br> </div>
-
-
+        } }} text-white">{{ strtoupper(env('APP_ENV', 'LOCAL')) }}</div>
     </div>
 </footer>
+
 {!! CookieConsent::scripts() !!}
 </body>
 </html>
