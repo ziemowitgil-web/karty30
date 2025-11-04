@@ -8,14 +8,32 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\Models\Activity;
+use Mpdf\Mpdf;
 
 class ConsultationController extends Controller
 {
+    // =========================================================
+    // ===================== Konstruktor ======================
+    // =========================================================
+
+    /**
+     * Apply authentication middleware
+     */
     public function __construct()
     {
         $this->middleware('auth');
     }
 
+    // =========================================================
+    // ===================== Lista konsultacji ================
+    // =========================================================
+
+    /**
+     * Display a listing of consultations.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\View\View
+     */
     public function index(Request $request)
     {
         $query = Consultation::with('client', 'user');
@@ -39,6 +57,11 @@ class ConsultationController extends Controller
         return view('Consultation.index', compact('consultations'));
     }
 
+    /**
+     * Show the form for creating a new consultation.
+     *
+     * @return \Illuminate\View\View
+     */
     public function create()
     {
         $clients = Client::orderBy('name')->get();
@@ -50,6 +73,16 @@ class ConsultationController extends Controller
         return view('Consultation.create', compact('clients', 'schedules'));
     }
 
+    // =========================================================
+    // ===================== Tworzenie konsultacji ============
+    // =========================================================
+
+    /**
+     * Store a newly created consultation in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -75,6 +108,7 @@ class ConsultationController extends Controller
         $validated['consultation_datetime'] = $validated['consultation_date'] . ' ' . $validated['consultation_time'];
         unset($validated['consultation_date'], $validated['consultation_time']);
 
+        // Walidacja klienta i limit godzin
         if ($validated['status'] !== 'draft' && $validated['client_id'] !== 'SYSTEM') {
             $client = Client::find($validated['client_id']);
             if ($client->blacklisted) {
@@ -98,6 +132,16 @@ class ConsultationController extends Controller
         return redirect()->route('consultations.index')->with('success', 'Konsultacja została dodana.');
     }
 
+    // =========================================================
+    // ===================== Usuwanie =========================
+    // =========================================================
+
+    /**
+     * Remove the specified consultation from storage.
+     *
+     * @param  \App\Models\Consultation  $consultation
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function destroy(Consultation $consultation)
     {
         activity()->causedBy(Auth::user())
@@ -108,8 +152,16 @@ class ConsultationController extends Controller
         return redirect()->route('consultations.index')->with('success', 'Konsultacja została usunięta.');
     }
 
+    // =========================================================
+    // ===================== Podpis konsultacji ===============
+    // =========================================================
+
     /**
-     * Podpisanie konsultacji (normalne lub AJAX JSON)
+     * Sign a consultation (normal or JSON mode)
+     *
+     * @param Consultation $consultation
+     * @param bool $jsonMode
+     * @return mixed
      */
     public function sign(Consultation $consultation, $jsonMode = false)
     {
@@ -180,7 +232,10 @@ class ConsultationController extends Controller
     }
 
     /**
-     * Endpoint AJAX JSON do podpisu
+     * AJAX JSON endpoint to sign consultation
+     *
+     * @param Consultation $consultation
+     * @return \Illuminate\Http\JsonResponse
      */
     public function signJson(Consultation $consultation)
     {
@@ -199,8 +254,12 @@ class ConsultationController extends Controller
         }
     }
 
+    // =========================================================
+    // ===================== Historia =========================
+    // =========================================================
+
     /**
-     * Historia podpisów (Blade)
+     * Show consultation signing history (Blade view)
      */
     public function history(Consultation $consultation)
     {
@@ -209,7 +268,7 @@ class ConsultationController extends Controller
     }
 
     /**
-     * Historia podpisów (JSON AJAX)
+     * Show consultation signing history (JSON AJAX)
      */
     public function historyJson(Consultation $consultation)
     {
@@ -220,8 +279,12 @@ class ConsultationController extends Controller
         ]);
     }
 
+    // =========================================================
+    // ===================== PDF / XML ========================
+    // =========================================================
+
     /**
-     * Generowanie PDF (przykładowa metoda)
+     * Generate PDF for consultation (example)
      */
     public function print(Consultation $consultation)
     {
@@ -231,11 +294,12 @@ class ConsultationController extends Controller
             ->performedOn($consultation)
             ->log("PDF konsultacji wydrukowany przez " . Auth::user()->name);
 
-        // Implementacja generowania PDF (np. Mpdf)
         return $this->generatePdf($consultation);
     }
 
-
+    /**
+     * Download consultation PDF
+     */
     public function downloadPdf(Consultation $consultation)
     {
         if (!$consultation->sha1sum) {
@@ -272,18 +336,19 @@ class ConsultationController extends Controller
                 <td><span style="font-family: monospace;">' . $consultation->sha1sum . '</span></td>
             </tr>
         </table>
-    ';
+        ';
 
         $mpdf->WriteHTML($html);
-        return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I'); // 'I' = podgląd w przeglądarce
+        return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I'); // 'I' = podgląd
     }
 
+    /**
+     * Generate XML for consultation
+     */
     public function xml(Consultation $consultation)
     {
         $xmlContent = $consultation->toXml(); // metoda generująca XML
         return response($xmlContent, 200)
             ->header('Content-Type', 'application/xml');
     }
-
-
 }

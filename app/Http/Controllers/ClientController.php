@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\Schedule;
 use Illuminate\Http\Request;
 use Mpdf\Mpdf;
-use App\Models\Schedule;
 use App\Http\Controllers\ExcelController;
-
 
 class ClientController extends Controller
 {
+    // =========================================================
+    // ===================== Klienci ===========================
+    // =========================================================
+
     /**
      * Display a listing of clients.
+     *
+     * @return \Illuminate\View\View
      */
     public function index()
     {
@@ -31,6 +36,8 @@ class ClientController extends Controller
 
     /**
      * Show the form for creating a new client.
+     *
+     * @return \Illuminate\View\View
      */
     public function create()
     {
@@ -39,14 +46,16 @@ class ClientController extends Controller
 
     /**
      * Store a newly created client in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
-
     public function store(Request $request)
     {
         // Podstawowy email, jeśli nie podano
         $email = $request->email ?: 'test@example.com';
 
-        // Walidacja tylko dla imienia i nazwiska oraz email
+        // Walidacja podstawowych pól
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:clients,email',
@@ -58,7 +67,7 @@ class ClientController extends Controller
 
         $validated['email'] = $email;
 
-        // Pozostałe pola opcjonalne
+        // Pola opcjonalne
         $optionalFields = [
             'phone', 'status', 'problem', 'equipment', 'date_of_birth',
             'gender', 'address', 'notes', 'consent', 'preferred_contact_method',
@@ -80,7 +89,7 @@ class ClientController extends Controller
             $validated['time_slots'] = json_encode($validated['time_slots']);
         }
 
-        $client = \App\Models\Client::create($validated);
+        $client = Client::create($validated);
 
         activity()
             ->performedOn($client)
@@ -91,9 +100,11 @@ class ClientController extends Controller
             ->with('success', 'Klient został dodany w systemie TyfloKonsultacje. Jest widoczny natychmiast, natomiast w CRM będzie widoczny za kilka godzin.');
     }
 
-
     /**
      * Show the form for editing the specified client.
+     *
+     * @param  \App\Models\Client  $client
+     * @return \Illuminate\View\View
      */
     public function edit(Client $client)
     {
@@ -105,6 +116,10 @@ class ClientController extends Controller
 
     /**
      * Update the specified client in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Client  $client
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, Client $client)
     {
@@ -145,6 +160,9 @@ class ClientController extends Controller
 
     /**
      * Remove the specified client from storage.
+     *
+     * @param  \App\Models\Client  $client
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(Client $client)
     {
@@ -158,8 +176,15 @@ class ClientController extends Controller
         return redirect()->route('clients.index')->with('success', 'Klient został pomyślnie usunięty.');
     }
 
+    // =========================================================
+    // =================== PDF / Dokumenty =====================
+    // =========================================================
+
     /**
      * Print client documents as PDF.
+     *
+     * @param  \App\Models\Client  $client
+     * @return \Mpdf\Mpdf
      */
     public function printDocuments(Client $client)
     {
@@ -175,13 +200,22 @@ class ClientController extends Controller
         $html = view('pdf.client', compact('client'))->render();
         $mpdf->WriteHTML($html);
 
-        $fileName = 'Karta_'.str_replace(' ', '_', $client->name).'.pdf';
+        $fileName = 'Karta_' . str_replace(' ', '_', $client->name) . '.pdf';
         return $mpdf->Output($fileName, 'D'); // D = download
     }
 
+    // =========================================================
+    // =================== Szczegóły klienta ==================
+    // =========================================================
+
+    /**
+     * Display detailed information for the specified client.
+     *
+     * @param  \App\Models\Client  $client
+     * @return \Illuminate\View\View
+     */
     public function details(Client $client)
     {
-        // Pobierz pełną kartotekę klienta, wraz z powiązanymi rekordami i aktywnością
         $client->load([
             'activities.causer',  // Historia zmian
             'schedules',          // Powiązane terminy
@@ -193,10 +227,18 @@ class ClientController extends Controller
         return view('Client.details', compact('client', 'days_slots'));
     }
 
+    // =========================================================
+    // ==================== Eksport Excel =====================
+    // =========================================================
+
+    /**
+     * Export the list of clients to XLS.
+     *
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
     public function exportXls()
     {
         $fileName = 'lista_klientow_' . date('Y_m_d_H_i') . '.xlsx';
         return ExcelController::download(new ClientsExport, $fileName);
     }
-
 }
