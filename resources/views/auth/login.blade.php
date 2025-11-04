@@ -130,8 +130,7 @@
 
         <!-- 🔹 Stopka -->
         <footer class="text-center text-gray-500 text-xs py-4">
-            <p>© {{ date('Y') }} Fundacja Edukacji Empatii Rozwoju • TyfloKonsultacje</p>
-            <p class="mt-1">
+
                 Wersja systemu:
                 <span class="font-medium text-gray-700">{{ env('APP_VERSION', '1.0.0') }}</span>
                 &nbsp;•&nbsp;
