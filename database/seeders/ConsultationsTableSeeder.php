@@ -28,7 +28,6 @@ class ConsultationsTableSeeder extends Seeder
             $schedule = $schedules->random() ?? null;
 
             Consultation::create([
-                'schedule_id' => $schedule?->id,
                 'client_id' => $client->id,
                 'user_id' => $user->id,
                 'consultation_datetime' => Carbon::now()->addDays(rand(1,10))->setTime(rand(8,16), 0),

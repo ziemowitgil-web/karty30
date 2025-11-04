@@ -49,6 +49,15 @@
                         <div class="flex-grow border-t border-gray-300"></div>
                     </div>
 
+                    <div class="mb-6 text-center text-gray-500 text-xs px-4">
+                        <strong>Uwaga:</strong> Logując się do systemu, <strong>przetwarzasz dane osobowe innych osób</strong> w ramach swojej pracy.
+                        Pamiętaj, aby przestrzegać zasad RODO i obowiązujących procedur wewnętrznych.
+                        <br>
+                        <a href="#" class="text-blue-700 hover:underline font-medium">
+                            Pełna polityka ochrony danych (RODO)
+                        </a>
+                    </div>
+
                     <!-- Formularz logowania -->
                     <form method="POST" action="{{ route('login') }}" class="space-y-5">
                         @csrf
