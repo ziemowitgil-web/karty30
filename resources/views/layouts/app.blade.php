@@ -10,7 +10,6 @@
         function toggleMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
-            menu.classList.toggle('block');
         }
 
         function toggleMobileSubmenu(id) {
@@ -31,9 +30,7 @@
     <div class="container mx-auto px-6 py-3 flex items-center justify-between">
 
         <!-- Logo / Title -->
-        @unless($accessible)
-            <span class="text-xl font-bold">{{ config('app.name', 'Laravel') }}</span>
-        @endunless
+        <span class="text-xl font-bold">{{ config('app.name', 'Laravel') }}</span>
 
         <!-- Desktop menu -->
         <nav class="hidden md:flex items-center space-x-4">
@@ -80,13 +77,12 @@
 
         <!-- Hamburger mobile -->
         <div class="md:hidden flex items-center">
-            <button onclick="toggleMenu()" class="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" aria-label="Otwórz menu mobilne">
+            <button onclick="toggleMenu()" class="focus:outline-none" aria-label="Otwórz menu mobilne">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
         </div>
-
     </div>
 
     <!-- Mobile menu -->
@@ -143,12 +139,6 @@
             &copy; {{ date('Y') }} {{ config('app.name', 'Laravel') }}
             <div class="text-xs text-gray-400">{{ env('APP_VERSION') }}</div>
         </div>
-
-        @unless($accessible)
-            @if(env('APP_LICENSE'))
-                <!-- Możesz tu dodać informację o licencji -->
-            @endif
-        @endunless
 
         <div class="px-2 py-1 rounded text-xs font-semibold {{ match(env('APP_ENV', 'local')) {
             'production' => 'bg-green-600',

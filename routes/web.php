@@ -18,15 +18,24 @@ use App\Http\Controllers\AdminServiceController;
 | Strona główna
 |--------------------------------------------------------------------------
 */
+
+/**
+ * Główna strona aplikacji – jeśli zalogowany przekierowuje do /home,
+ * w przeciwnym razie do /login
+ */
 Route::get('/', function () {
     return auth()->check() ? redirect('/home') : redirect('/login');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Autoryzacja (logowanie, rejestracja, reset hasła)
+| Autoryzacja
 |--------------------------------------------------------------------------
 */
+
+/**
+ * Trasy logowania, rejestracji i resetu hasła
+ */
 Auth::routes();
 
 /*
@@ -34,6 +43,10 @@ Auth::routes();
 | Accessibility toggle
 |--------------------------------------------------------------------------
 */
+
+/**
+ * Przełącznik trybu dostępności
+ */
 Route::post('/toggle-accessible', [HomeController::class, 'toggleAccessible'])
     ->name('toggle-accessible');
 
@@ -42,36 +55,54 @@ Route::post('/toggle-accessible', [HomeController::class, 'toggleAccessible'])
 | Dashboard
 |--------------------------------------------------------------------------
 */
+
+/**
+ * Dashboard / panel główny po zalogowaniu
+ */
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-// Administrator
+/*
+|--------------------------------------------------------------------------
+| Administrator
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Panel administratora
+ */
 Route::get('/log', [AdminServiceController::class, 'log'])->name('logs');
 Route::post('/log/clear', [AdminServiceController::class, 'clearLog'])->name('logs.clear');
 Route::post('/env/update', [AdminServiceController::class, 'updateEnv'])->name('env.update');
 
 /*
 |--------------------------------------------------------------------------
-| Szybka rezerwacja – dostępna bez logowania
+| Szybka rezerwacja
 |--------------------------------------------------------------------------
 */
+
+/**
+ * Formularz szybkiej rezerwacji dostępnej bez logowania
+ */
 Route::get('/s', [ScheduleController::class, 'quickReserve'])->name('quickreservation');
 Route::post('/s', [ScheduleController::class, 'quickReserve'])->name('quickreservationstore');
 
 /*
 |--------------------------------------------------------------------------
-| WebAuthn - logowanie (YubiKey)
+| WebAuthn
 |--------------------------------------------------------------------------
 */
+
+/**
+ * Logowanie z użyciem kluczy sprzętowych (YubiKey)
+ */
 Route::get('/webauthn/challenge', [WebAuthnLoginController::class, 'showChallengeForm'])
     ->name('webauthn.challenge');
 Route::post('/webauthn/challenge', [WebAuthnLoginController::class, 'verifyChallenge'])
     ->name('webauthn.verify');
 
-/*
-|--------------------------------------------------------------------------
-| WebAuthn - rejestracja kluczy
-|--------------------------------------------------------------------------
-*/
+/**
+ * Rejestracja kluczy WebAuthn
+ */
 Route::prefix('webauthn/keys')->name('webauthn.keys.')->middleware('auth')->group(function () {
     Route::get('/', [WebAuthnRegisterController::class, 'index'])->name('index');
     Route::get('/options', [WebAuthnRegisterController::class, 'options'])->name('options');
@@ -84,9 +115,12 @@ Route::prefix('webauthn/keys')->name('webauthn.keys.')->middleware('auth')->grou
 | Grupa tras chronionych middleware 'auth'
 |--------------------------------------------------------------------------
 */
+
 Route::middleware(['auth'])->group(function () {
 
-    // Dashboard
+    /**
+     * Dashboard
+     */
     Route::get('/dashboard', [HomeController::class, 'index']);
 
     /*
@@ -94,14 +128,29 @@ Route::middleware(['auth'])->group(function () {
     | Klienci
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Zarządzanie klientami
+     */
     Route::prefix('clients')->name('clients.')->group(function () {
-        Route::get('/list', [ClientController::class,'index'])->name('index');
+        // Lista klientów
+        Route::get('/', [ClientController::class,'index'])->name('index');
+
+        // Tworzenie nowego klienta
         Route::get('/create', [ClientController::class,'create'])->name('create');
         Route::post('/store', [ClientController::class,'store'])->name('store');
+
+        // Szczegóły klienta
         Route::get('/{client}/details', [ClientController::class, 'details'])->name('details');
+
+        // Drukowanie dokumentów klienta
         Route::get('/{client}/print', [ClientController::class, 'printDocuments'])->name('print');
+
+        // Usuwanie klienta
         Route::delete('/{client}', [ClientController::class, 'destroy'])->name('destroy');
-        Route::get('/export', [ClientController::class, 'exportXls'])->name('clients.export');
+
+        // Eksport do XLS
+        Route::get('/export', [ClientController::class, 'exportXls'])->name('export');
     });
 
     /*
@@ -109,6 +158,10 @@ Route::middleware(['auth'])->group(function () {
     | Harmonogram
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Zarządzanie harmonogramem i rezerwacjami
+     */
     Route::prefix('schedules')->name('schedules.')->group(function () {
         Route::get('/', [ScheduleController::class, 'index'])->name('index');
         Route::get('/create', [ScheduleController::class, 'create'])->name('create');
@@ -120,10 +173,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{schedule}/cancel', [ScheduleController::class, 'cancel'])->name('cancel');
         Route::post('/{schedule}/cancelByFeer', [ScheduleController::class, 'cancelByFeer'])->name('cancelByFeer');
         Route::post('/{schedule}/cancelByClient', [ScheduleController::class, 'cancelByClient'])->name('cancelByClient');
-        Route::get('/calendar', [ScheduleController::class, 'calendar'])->name('schedules.calendar');
+        Route::get('/calendar', [ScheduleController::class, 'calendar'])->name('calendar');
 
-        Route::get('/{schedule}/reschedule', [ScheduleController::class, 'rescheduleForm'])->name('schedules.rescheduleForm');
-        Route::patch('/{schedule}/reschedule', [ScheduleController::class, 'updateReschedule'])->name('schedules.updateReschedule');
+        // Rescheduling
+        Route::get('/{schedule}/reschedule', [ScheduleController::class, 'rescheduleForm'])->name('rescheduleForm');
+        Route::patch('/{schedule}/reschedule', [ScheduleController::class, 'updateReschedule'])->name('updateReschedule');
 
         // Blacklista klientów
         Route::prefix('client-blacklist')->name('client_blacklist.')->group(function () {
@@ -135,7 +189,7 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Formularz danych dokumentu użytkownika
+    | Formularz dokumentu użytkownika
     |--------------------------------------------------------------------------
     */
     Route::prefix('user-document')->name('user.document.')->group(function () {
@@ -165,6 +219,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{consultation}/history-json', [ConsultationController::class, 'historyJson'])->name('history.json');
         Route::get('/{consultation}/history', [ConsultationController::class, 'history'])->name('history');
         Route::get('/{consultation}/pdf', [ConsultationController::class, 'print'])->name('pdf');
+        Route::get('/{consultation}/xml', [ConsultationController::class, 'xml'])->name('xml');
     });
 
     /*
@@ -172,14 +227,11 @@ Route::middleware(['auth'])->group(function () {
     | Raporty
     |--------------------------------------------------------------------------
     */
-    Route::get('raporty/', [RaportController::class, 'index'])->name('raport');
-    Route::get('raports/', [RaportController::class, 'index'])->name('raport');
+    Route::get('/raporty', [RaportController::class, 'index'])->name('raport');
     Route::get('/raports/cancelled', [RaportController::class, 'cancelledSchedulesReport'])->name('raports.cancelled');
     Route::get('/raports/blacklist', [RaportController::class, 'blacklistReport'])->name('raports.blacklist');
     Route::get('/raports/consultation/approvedthismonth', [RaportController::class, 'approvedThisMonthReport'])->name('raports.approvedThisMonth');
     Route::get('/raports/consultation/approvedlastmonth', [RaportController::class, 'approvedLastMonthReport'])->name('raports.approvedLastMonth');
-    Route::get('/raports/consultation/monthlyReportMRPIPS/', [RaportController::class, 'monthlyReportMRPIPS'])->name('raports.monthlyReportMRPIPS');
+    Route::get('/raports/consultation/monthlyReportMRPIPS', [RaportController::class, 'monthlyReportMRPIPS'])->name('raports.monthlyReportMRPIPS');
     Route::get('/raports/consultation/monthlyReportMRPIPS/email', [RaportController::class, 'sendMonthlyReportMRPIPS'])->name('raports.monthlyReportMRPIPS.email');
-    Route::get('/consultations/{consultation}/xml', [ConsultationController::class, 'xml'])->name('consultations.xml');
-
 });
