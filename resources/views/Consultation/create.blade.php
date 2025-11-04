@@ -16,7 +16,17 @@
             </div>
         @endif
 
-        <form id="consultationForm" action="{{ route('consultations.index') }}" method="POST" class="space-y-6 bg-white p-6 rounded shadow">
+        @if($errors->any())
+            <div class="bg-red-100 text-red-700 px-4 py-3 rounded mb-4">
+                <ul class="list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form id="consultationForm" action="{{ route('consultations.store') }}" method="POST" class="space-y-6 bg-white p-6 rounded shadow">
             @csrf
             <input type="hidden" name="status" value="draft">
 
@@ -86,7 +96,7 @@
         </form>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal potwierdzenia -->
     <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
         <div class="bg-white p-6 rounded shadow-lg max-w-md w-full">
             <h2 class="text-xl font-semibold mb-4">Potwierdź dane konsultacji</h2>
@@ -128,7 +138,7 @@
         }
 
         function submitDraft(){
-            document.qubladerySelector('input[name="status"]').value = 'draft';
+            document.querySelector('input[name="status"]').value = 'draft';
             document.getElementById('consultationForm').submit();
         }
     </script>
