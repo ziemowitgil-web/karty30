@@ -32,7 +32,7 @@ class HomeController extends Controller
                 $redisStatus = "Błąd połączenia z Redis! Kolejkowanie może nie działać.";
             }
         } else {
-            $redisStatus = 'Nie sprawdzano w trybie testowym';
+            $redisStatus = 'Błąd połączenia - blokada. Tryb testowy REDIS nie zbiera danych sesji. ';
         }
 
         // --- LOG DO ACTIVITY ---
