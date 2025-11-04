@@ -64,7 +64,7 @@
             @guest
                 <a href="{{ route('login') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Logowanie</a>
                 @if(env('APP_LICENSE') && !$accessible)
-                    <span class="text-gray-300 text-xs ml-2">Organizacja: {{ env('APP_LICENSE') }}</span>
+                    <span class="text-gray-300 text-xs ml-2"></span>
                 @endif
             @endguest
         </nav>
