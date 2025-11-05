@@ -258,7 +258,7 @@
             @if(app()->environment('staging'))
             document.getElementById('deleteTestData').addEventListener('click', function(){
                 if(confirm('Na pewno usunąć wszystkie dane testowe?')) {
-                    fetch('{{ route("consultations.deleteTestData") }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } })
+                    fetch('{{ route('consultations.deleteTestData') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } })
                         .then(res => res.json())
                         .then(data => alert(data.message))
                         .catch(err => alert('Błąd: ' + err));
