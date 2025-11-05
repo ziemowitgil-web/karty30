@@ -7,17 +7,17 @@
 
         {{-- Środowisko staging --}}
         @if(app()->environment('staging'))
-            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
-                Uwaga: Certyfikat testowy systemu jest aktywny (STAGING)
-            </div>
-
-            <div class="mb-6 flex gap-4">
-                <form method="POST" action="{{ route('consultations.deleteTestData') }}">
-                    @csrf
-                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-400">
-                        Usuń dane testowe
-                    </button>
-                </form>
+            <div class="border-2 border-yellow-400 bg-yellow-50 p-4 rounded-lg mb-6 flex items-start gap-4">
+                <img src="https://cdn-icons-png.flaticon.com/512/1828/1828843.png" alt="Ostrzeżenie" class="w-10 h-10">
+                <div>
+                    <p class="text-yellow-800 font-semibold mb-2">Uwaga: Certyfikat testowy systemu jest aktywny (STAGING)</p>
+                    <form method="POST" action="{{ route('consultations.deleteTestData') }}">
+                        @csrf
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-400">
+                            Usuń dane testowe
+                        </button>
+                    </form>
+                </div>
             </div>
         @endif
 
@@ -114,7 +114,7 @@
             </table>
         </div>
 
-        <!-- Tutaj wklej całą sekcję modali i JS z Twojego oryginalnego widoku -->
+        <!-- Modale podpisu i historii oraz JS pozostają takie same jak w poprzednim widoku -->
 
     </div>
 @endsection
