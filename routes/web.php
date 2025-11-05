@@ -213,8 +213,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{consultation}/check-auth', [ConsultationController::class, 'checkAuthenticity'])->name('checkAuth');
         Route::patch('/{consultation}/approve', [ConsultationController::class, 'approve'])->name('approve');
         Route::post('/bulk-approve', [ConsultationController::class, 'bulkApprove'])->name('bulk_approve');
-        Route::post('/consultations/delete-test-data', [ConsultationController::class, 'deleteTestData']);
-            ->name('consultations.deleteTestData');
+        Route::post('/consultations/delete-test-data', [ConsultationController::class, 'deleteTestData'])->name('consultations.deleteTestData');
+
         // Podpis i historia
         Route::post('/{consultation}/sign', [ConsultationController::class, 'signJson'])->name('sign');
         Route::get('/{consultation}/history-json', [ConsultationController::class, 'historyJson'])->name('history.json');
