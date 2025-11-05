@@ -4,21 +4,24 @@
     <div class="container mx-auto p-6 max-w-4xl">
         <h1 class="text-3xl font-bold mb-6 text-gray-900">Dodaj konsultację</h1>
 
+        {{-- Komunikaty --}}
         @if(session('error'))
-            <div class="bg-red-100 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-                {{ session('error') }}
+            <div id="alert" class="flex items-center p-4 mb-4 text-red-800 border border-red-300 rounded-lg bg-red-50 animate-fade-in" role="alert">
+                <svg class="flex-shrink-0 w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20"><path d="M10 .5a9.5 9.5 0 109.5 9.5A9.51 9.51 0 0010 .5zM9 5a1 1 0 012 0v5a1 1 0 01-2 0zm1 8a1.25 1.25 0 111.25-1.25A1.25 1.25 0 0110 13z"/></svg>
+                <span class="font-medium">{{ session('error') }}</span>
             </div>
         @endif
 
         @if(session('success'))
-            <div class="bg-green-100 text-green-700 px-4 py-3 rounded mb-4" role="alert">
-                {{ session('success') }}
+            <div id="alert" class="flex items-center p-4 mb-4 text-green-800 border border-green-300 rounded-lg bg-green-50 animate-fade-in" role="alert">
+                <svg class="flex-shrink-0 w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"/></svg>
+                <span class="font-medium">{{ session('success') }}</span>
             </div>
         @endif
 
         @if($errors->any())
-            <div class="bg-red-100 text-red-700 px-4 py-3 rounded mb-4">
-                <ul class="list-disc list-inside">
+            <div id="alert" class="p-4 mb-4 text-red-800 border border-red-300 rounded-lg bg-red-50 animate-fade-in">
+                <ul class="list-disc list-inside space-y-1">
                     @foreach($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -26,6 +29,7 @@
             </div>
         @endif
 
+        {{-- Formularz --}}
         <form id="consultationForm" action="{{ route('consultations.store') }}" method="POST" class="space-y-6 bg-white p-6 rounded shadow">
             @csrf
             <input type="hidden" name="status" value="draft">
@@ -91,7 +95,7 @@
 
             <!-- Zapis roboczo -->
             <div class="flex justify-end mt-4">
-                <button type="button" onclick="confirmDraft()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Zapisz roboczo</button>
+                <button type="button" onclick="confirmDraft()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">Zapisz roboczo</button>
             </div>
         </form>
     </div>
@@ -100,13 +104,18 @@
     <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
         <div class="bg-white p-6 rounded shadow-lg max-w-md w-full">
             <h2 class="text-xl font-semibold mb-4">Potwierdź dane konsultacji</h2>
-            <p class="mb-4">Upewnij się, że wszystkie dane są poprawne. Konsultacja zostanie zapisana jako draft.</p>
+            <p class="mb-4">Upewnij się, że wszystkie dane są poprawne. Konsultacja zostanie zapisana jako <strong>wersja robocza</strong>.</p>
             <div class="flex justify-end gap-4">
                 <button onclick="closeModal()" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Anuluj</button>
                 <button onclick="submitDraft()" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Potwierdź</button>
             </div>
         </div>
     </div>
+
+    <style>
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+        .animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
+    </style>
 
     <script>
         const scheduleSelect = document.getElementById('scheduleSelect');
@@ -127,7 +136,7 @@
 
         function confirmDraft(){
             if(!clientSelect.value || !consultationDate.value || !consultationTime.value || !durationMinutes.value){
-                alert('Proszę wypełnić wszystkie wymagane pola.');
+                showToast('Proszę wypełnić wszystkie wymagane pola.', 'error');
                 return;
             }
             document.getElementById('confirmModal').classList.remove('hidden');
@@ -140,6 +149,23 @@
         function submitDraft(){
             document.querySelector('input[name="status"]').value = 'draft';
             document.getElementById('consultationForm').submit();
+        }
+
+        // Automatyczne chowanie komunikatów
+        const alertBox = document.getElementById('alert');
+        if (alertBox) {
+            setTimeout(() => alertBox.classList.add('opacity-0', 'transition-opacity', 'duration-700'), 4000);
+            setTimeout(() => alertBox.remove(), 4700);
+        }
+
+        // Mały toast dla błędów JS
+        function showToast(message, type = 'info') {
+            const bg = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+            const toast = document.createElement('div');
+            toast.className = `${bg} text-white px-4 py-2 rounded shadow fixed bottom-4 right-4 animate-fade-in`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
         }
     </script>
 @endsection
