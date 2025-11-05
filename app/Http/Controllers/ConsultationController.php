@@ -7,7 +7,6 @@ use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Spatie\Activitylog\Models\Activity;
 use Mpdf\Mpdf;
 
 class ConsultationController extends Controller
@@ -61,7 +60,7 @@ class ConsultationController extends Controller
     {
         $validated = $request->validate([
             'schedule_id' => 'nullable|exists:schedules,id',
-            'client_id' => ['required', function ($attribute, $value, $fail) {
+            'client_id' => ['required', function ($attr, $value, $fail) {
                 if ($value !== 'SYSTEM' && !Client::where('id', $value)->exists()) {
                     $fail('Wybrany klient nie istnieje.');
                 }
@@ -75,14 +74,15 @@ class ConsultationController extends Controller
             'sign_type' => 'nullable|in:qualified,eid,feer',
         ]);
 
+        $validated['consultation_datetime'] = $validated['consultation_date'] . ' ' . $validated['consultation_time'];
+        unset($validated['consultation_date'], $validated['consultation_time']);
+
         $validated['user_id'] = Auth::id();
         $validated['user_email'] = Auth::user()->email;
         $validated['username'] = Auth::user()->name;
         $validated['user_ip'] = $request->ip();
-        $validated['consultation_datetime'] = $validated['consultation_date'] . ' ' . $validated['consultation_time'];
-        unset($validated['consultation_date'], $validated['consultation_time']);
 
-        // Walidacja klienta i limit godzin
+        // Walidacja klienta (czarna lista i limit godzin)
         if ($validated['status'] !== 'draft' && $validated['client_id'] !== 'SYSTEM') {
             $client = Client::find($validated['client_id']);
             if ($client->blacklisted) {
@@ -99,16 +99,21 @@ class ConsultationController extends Controller
 
         $consultation = Consultation::create($validated);
 
-        activity()->causedBy(Auth::user())
+        activity()
+            ->causedBy(Auth::user())
             ->performedOn($consultation)
-            ->log("Konsultacja utworzona z status: {$validated['status']}");
+            ->log("Konsultacja utworzona (status: {$validated['status']})");
 
         return redirect()->route('consultations.index')->with('success', 'Konsultacja została dodana.');
     }
 
+    // =========================================================
+    // ===================== USUWANIE =========================
+    // =========================================================
     public function destroy(Consultation $consultation)
     {
-        activity()->causedBy(Auth::user())
+        activity()
+            ->causedBy(Auth::user())
             ->performedOn($consultation)
             ->log("Konsultacja usunięta przez " . Auth::user()->name);
 
@@ -127,11 +132,11 @@ class ConsultationController extends Controller
         }
 
         try {
-            activity()->causedBy(Auth::user())->performedOn($consultation)->log('Karta przekazana do procesowania');
+            activity()->causedBy(Auth::user())->performedOn($consultation)->log('Konsultacja przekazana do podpisu');
 
             $steps = [
                 'Weryfikacja pliku XML dokumentu',
-                'Weryfikacja certyfikatu Systemu',
+                'Weryfikacja certyfikatu systemu',
                 'Weryfikacja certyfikatu użytkownika',
                 'Proces podpisu dokumentu',
                 'Weryfikacja kompetencji podpisu',
@@ -152,13 +157,13 @@ class ConsultationController extends Controller
             $filePath = $dir . DIRECTORY_SEPARATOR . $fileName;
 
             $xmlContent = '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
-            $xmlContent .= "<consultation>" . PHP_EOL;
-            $xmlContent .= "  <id>{$consultation->id}</id>" . PHP_EOL;
-            $xmlContent .= "  <client_id>{$clientId}</client_id>" . PHP_EOL;
-            $xmlContent .= "  <conducted_by>{$consultation->user->name}</conducted_by>" . PHP_EOL;
-            $xmlContent .= "  <datetime>{$consultation->consultation_datetime}</datetime>" . PHP_EOL;
-            $xmlContent .= "  <duration>{$consultation->duration_minutes}</duration>" . PHP_EOL;
-            $xmlContent .= "  <description>" . htmlspecialchars($consultation->description) . "</description>" . PHP_EOL;
+            $xmlContent .= "<consultation>\n";
+            $xmlContent .= "  <id>{$consultation->id}</id>\n";
+            $xmlContent .= "  <client_id>{$clientId}</client_id>\n";
+            $xmlContent .= "  <conducted_by>{$consultation->user->name}</conducted_by>\n";
+            $xmlContent .= "  <datetime>{$consultation->consultation_datetime}</datetime>\n";
+            $xmlContent .= "  <duration>{$consultation->duration_minutes}</duration>\n";
+            $xmlContent .= "  <description>" . htmlspecialchars($consultation->description) . "</description>\n";
             $xmlContent .= "</consultation>";
 
             file_put_contents($filePath, $xmlContent);
@@ -170,9 +175,6 @@ class ConsultationController extends Controller
             }
 
             $sha1 = @sha1_file($filePath) ?: substr(str_shuffle('abcdef0123456789'), 0, 40);
-            if(!$sha1){
-                Log::error("Nie udało się wygenerować SHA1 dla konsultacji {$consultation->id}");
-            }
 
             $consultation->update([
                 'sha1sum' => $sha1,
@@ -180,13 +182,13 @@ class ConsultationController extends Controller
                 'approved_by_name' => Auth::user()->name
             ]);
 
-            activity()->causedBy(Auth::user())->performedOn($consultation)->log("Karta podpisana, SHA1: {$sha1}");
+            activity()->causedBy(Auth::user())->performedOn($consultation)->log("Konsultacja podpisana (SHA1: {$sha1})");
 
-            $msg = "Karta konsultacyjna o ID {$consultation->id} podpisana. SHA1: {$sha1}";
-
+            $msg = "Konsultacja ID {$consultation->id} podpisana. SHA1: {$sha1}";
             return $jsonMode ? $msg : redirect()->back()->with('success', $msg);
 
-        } catch (\Exception $e){
+        } catch (\Exception $e) {
+            Log::error("Błąd podpisu konsultacji {$consultation->id}: {$e->getMessage()}");
             return $jsonMode ? throw $e : redirect()->back()->with('error', 'Błąd podpisu: '.$e->getMessage());
         }
     }
@@ -226,15 +228,9 @@ class ConsultationController extends Controller
         if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
 
         $mpdf = new Mpdf();
-        $html = '<h1>Konsultacja #' . $consultation->id . '</h1><table style="width:100%; border-collapse: collapse;">
-            <tr><td><strong>Klient:</strong></td><td>' . ($consultation->client->name ?? '-') . '</td></tr>
-            <tr><td><strong>Data i godzina:</strong></td><td>' . \Carbon\Carbon::parse($consultation->consultation_datetime)->format('d.m.Y H:i') . '</td></tr>
-            <tr><td><strong>Czas trwania:</strong></td><td>' . $consultation->duration_minutes . ' min</td></tr>
-            <tr><td><strong>Przeprowadził:</strong></td><td>' . ($consultation->user->name ?? '-') . '</td></tr>
-            <tr><td><strong>Opis:</strong></td><td>' . nl2br(htmlspecialchars($consultation->description)) . '</td></tr>
-            <tr><td><strong>SHA1:</strong></td><td><span style="font-family: monospace;">' . $consultation->sha1sum . '</span></td></tr>
-        </table>';
+        $html = view('Consultation.pdf', compact('consultation'))->render();
         $mpdf->WriteHTML($html);
+
         return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
     }
 
