@@ -17,6 +17,9 @@ class ConsultationController extends Controller
         $this->middleware('auth');
     }
 
+    // =========================================================
+    // ===================== LISTA ============================
+    // =========================================================
     public function index(Request $request)
     {
         $query = Consultation::with('client', 'user');
@@ -40,6 +43,9 @@ class ConsultationController extends Controller
         return view('Consultation.index', compact('consultations'));
     }
 
+    // =========================================================
+    // ===================== FORMULARZ ========================
+    // =========================================================
     public function create()
     {
         $clients = Client::orderBy('name')->get();
@@ -85,14 +91,13 @@ class ConsultationController extends Controller
             $hoursUsed = round($validated['duration_minutes'] / 60, 2);
             $availableHours = $client->getAvailableHoursNumberAttribute();
             if (($client->used + $hoursUsed) > $availableHours) {
-                return redirect()->back()->with('error', "Klient nie ma wystarczająco godzin (pozostało: {$availableHours}).")->withInput();
+                return redirect()->back()->withInput()->with('error', "Klient nie ma wystarczająco godzin (pozostało: {$availableHours}).");
             }
             $client->used += $hoursUsed;
             $client->save();
         }
 
         $consultation = Consultation::create($validated);
-
 
         activity()->causedBy(Auth::user())
             ->performedOn($consultation)
@@ -112,14 +117,13 @@ class ConsultationController extends Controller
     }
 
     // =========================================================
-    // ===================== Podpis ===========================
+    // ===================== PODPIS ===========================
     // =========================================================
-
     public function sign(Consultation $consultation, $jsonMode = false)
     {
         if ($consultation->status !== 'draft') {
-            if ($jsonMode) return "Tylko wersje robocze można podpisać.";
-            return redirect()->back()->with('error','Tylko wersje robocze można podpisać.');
+            $msg = "Tylko wersje robocze można podpisać.";
+            return $jsonMode ? $msg : redirect()->back()->with('error', $msg);
         }
 
         try {
@@ -159,42 +163,38 @@ class ConsultationController extends Controller
 
             file_put_contents($filePath, $xmlContent);
 
-            // Jeśli STAGING, usuń plik po procesie
             if(app()->environment('staging')){
                 register_shutdown_function(function() use ($filePath){
                     if(file_exists($filePath)) unlink($filePath);
                 });
             }
 
-            $sha1 = @sha1_file($filePath);
+            $sha1 = @sha1_file($filePath) ?: substr(str_shuffle('abcdef0123456789'), 0, 40);
             if(!$sha1){
-                $sha1 = substr(str_shuffle('abcdef0123456789'), 0, 40);
-                Log::error("Nie udało się wygenerować SHA1 dla konsultacji {$consultation->id}, wygenerowano losowy skrót {$sha1}");
+                Log::error("Nie udało się wygenerować SHA1 dla konsultacji {$consultation->id}");
             }
 
-            $consultation->sha1sum = $sha1;
-            $consultation->status = 'completed';
-            $consultation->approved_by_name = Auth::user()->name;
-            $consultation->save();
+            $consultation->update([
+                'sha1sum' => $sha1,
+                'status' => 'completed',
+                'approved_by_name' => Auth::user()->name
+            ]);
 
             activity()->causedBy(Auth::user())->performedOn($consultation)->log("Karta podpisana, SHA1: {$sha1}");
 
             $msg = "Karta konsultacyjna o ID {$consultation->id} podpisana. SHA1: {$sha1}";
 
-            if($jsonMode) return $msg;
-            return redirect()->back()->with('success', $msg);
+            return $jsonMode ? $msg : redirect()->back()->with('success', $msg);
 
         } catch (\Exception $e){
-            if($jsonMode) throw $e;
-            return redirect()->back()->with('error','Błąd podpisu: '.$e->getMessage());
+            return $jsonMode ? throw $e : redirect()->back()->with('error', 'Błąd podpisu: '.$e->getMessage());
         }
     }
 
     public function signJson(Consultation $consultation)
     {
-        try{
+        try {
             $msg = $this->sign($consultation, true);
-
             return response()->json([
                 'success' => true,
                 'message' => $msg,
@@ -218,10 +218,13 @@ class ConsultationController extends Controller
         ]);
     }
 
-    // PDF / XML
+    // =========================================================
+    // ===================== PDF / XML ========================
+    // =========================================================
     public function downloadPdf(Consultation $consultation)
     {
         if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
+
         $mpdf = new Mpdf();
         $html = '<h1>Konsultacja #' . $consultation->id . '</h1><table style="width:100%; border-collapse: collapse;">
             <tr><td><strong>Klient:</strong></td><td>' . ($consultation->client->name ?? '-') . '</td></tr>
@@ -241,9 +244,9 @@ class ConsultationController extends Controller
         return response($xmlContent, 200)->header('Content-Type', 'application/xml');
     }
 
-    /**
-     * Usuń dane testowe (STAGING)
-     */
+    // =========================================================
+    // ===================== STAGING TEST =====================
+    // =========================================================
     public function deleteTestData(Request $request)
     {
         if(!app()->environment('staging')){
@@ -264,5 +267,4 @@ class ConsultationController extends Controller
 
         return response()->json(['message' => "Usunięto $filesDeleted plików testowych."]);
     }
-
 }
