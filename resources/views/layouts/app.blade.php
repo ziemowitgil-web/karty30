@@ -35,43 +35,48 @@
         <!-- Desktop menu -->
         <nav class="hidden md:flex items-center space-x-4">
             @auth
-                <a href="{{ route('home') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Strona główna</a>
-                <a href="{{ route('schedules.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Rezerwacje</a>
-                <a href="{{ route('consultations.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Konsultacje</a>
+                <a href="{{ route('home') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
+                <a href="{{ route('schedules.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
+                <a href="{{ route('consultations.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
+
+                {{-- Szybka rezerwacja --}}
+                <a href="{{ route('schedules.create') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white" aria-label="Dodaj szybką rezerwację">
+                    + Rezerwacja
+                </a>
 
                 @unless($accessible)
-                    <a href="{{ route('clients.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Klienci</a>
+                    <a href="{{ route('clients.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Klienci</a>
 
                     <!-- Raporty z rozwijanym menu -->
                     <div class="relative group">
-                        <button class="px-4 py-2 rounded hover:bg-gray-700 flex items-center space-x-1 transition">
+                        <button class="px-4 py-2 rounded hover:bg-gray-700 flex items-center space-x-1 transition focus:outline-none focus:ring-2 focus:ring-white" aria-haspopup="true" aria-expanded="false">
                             Raporty
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <div class="absolute left-0 mt-1 w-64 bg-gray-800 rounded shadow-lg hidden group-hover:block z-50">
-                            <a href="{{ route('raport') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Podsumowanie</a>
-                            <a href="{{ route('raports.cancelled') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Odwołane rezerwacje</a>
-                            <a href="{{ route('raports.blacklist') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Czarna lista</a>
-                            <a href="{{ route('raports.approvedThisMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Konsultacje zatwierdzone w tym miesiącu</a>
-                            <a href="{{ route('raports.approvedLastMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Konsultacje zatwierdzone w poprzednim miesiącu</a>
-                            <a href="{{ route('raports.monthlyReportMRPIPS') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Raport MRPiPS</a>
-                            <a href="{{ route('raports.monthlyReportMRPIPS.email') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition">Wyślij raport MRPiPS</a>
+                        <div class="absolute left-0 mt-1 w-64 bg-gray-800 rounded shadow-lg hidden group-hover:block z-50" role="menu">
+                            <a href="{{ route('raport') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Podsumowanie</a>
+                            <a href="{{ route('raports.cancelled') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Odwołane rezerwacje</a>
+                            <a href="{{ route('raports.blacklist') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Czarna lista</a>
+                            <a href="{{ route('raports.approvedThisMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Konsultacje zatwierdzone w tym miesiącu</a>
+                            <a href="{{ route('raports.approvedLastMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Konsultacje zatwierdzone w poprzednim miesiącu</a>
+                            <a href="{{ route('raports.monthlyReportMRPIPS') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Raport MRPiPS</a>
+                            <a href="{{ route('raports.monthlyReportMRPIPS.email') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Wyślij raport MRPiPS</a>
                         </div>
                     </div>
                 @endunless
 
                 @if(auth()->user()->is_admin ?? true)
-                    <a href="{{ route('logs') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Logi</a>
+                    <a href="{{ route('logs') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
                 @endif
 
-                <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-4 py-2 rounded hover:bg-gray-700 transition">Wyloguj</a>
+                <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
             @endauth
 
             @guest
-                <a href="{{ route('login') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition">Logowanie</a>
+                <a href="{{ route('login') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logowanie</a>
             @endguest
         </nav>
 
@@ -86,23 +91,22 @@
     </div>
 
     <!-- Mobile menu -->
-    <div id="mobile-menu" class="md:hidden hidden bg-gray-800 px-4 py-4 space-y-2">
+    <div id="mobile-menu" class="md:hidden hidden bg-gray-800 px-4 py-4 space-y-2" role="menu">
         @auth
             <a href="{{ route('home') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Strona główna</a>
             <a href="{{ route('schedules.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Rezerwacje</a>
             <a href="{{ route('consultations.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Konsultacje</a>
+            <a href="{{ route('schedules.create') }}" class="block px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">+ Rezerwacja</a>
 
             @unless($accessible)
                 <a href="{{ route('clients.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Klienci</a>
-
-                <!-- Raporty z rozwijanym submenu -->
                 <button onclick="toggleMobileSubmenu('mobile-raporty')" class="w-full text-left px-4 py-2 rounded hover:bg-gray-700 flex justify-between items-center">
                     Raporty
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                     </svg>
                 </button>
-                <div id="mobile-raporty" class="hidden pl-4">
+                <div id="mobile-raporty" class="hidden pl-4" role="menu">
                     <a href="{{ route('raport') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Podsumowanie</a>
                     <a href="{{ route('raports.cancelled') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Odwołane rezerwacje</a>
                     <a href="{{ route('raports.blacklist') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Czarna lista</a>
