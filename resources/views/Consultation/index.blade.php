@@ -10,14 +10,6 @@
             </div>
         @endif
 
-        {{-- Komunikat o niepodpisanych konsultacjach --}}
-        @php $draftCount = $consultations->where('status','draft')->count(); @endphp
-        @if($draftCount > 0)
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert" tabindex="0">
-                Masz {{ $draftCount }} niepodpisane konsultacje!
-            </div>
-        @endif
-
         <h1 class="text-3xl font-bold mb-6">Konsultacje</h1>
 
         <a href="{{ route('consultations.create') }}"
@@ -105,15 +97,14 @@
 
         {{-- Modal podpisu --}}
         <div id="signModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white p-6 rounded-xl max-w-2xl w-full shadow-lg relative">
+            <div class="bg-white p-6 rounded-xl max-w-2xl w-full shadow-lg relative" role="dialog" aria-modal="true" aria-labelledby="signModalTitle">
                 <button id="closeSignModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800" aria-label="Zamknij modal">&times;</button>
 
-                <h3 class="text-2xl font-bold mb-4 text-center">Proces podpisywania karty konsultacji</h3>
+                <h3 id="signModalTitle" class="text-2xl font-bold mb-4 text-center">Proces podpisywania karty konsultacji</h3>
                 <p class="text-gray-600 mb-6 text-center">
                     Podpis cyfrowy zapewnia bezpieczeństwo i integralność dokumentu. Każdy etap jest monitorowany, a dane są szyfrowane i oznaczane unikalnym SHA1.
                 </p>
 
-                {{-- Certyfikat użytkownika --}}
                 <div class="flex items-center gap-4 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg mb-6 shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24"
                          stroke="currentColor" stroke-width="2">
@@ -126,21 +117,18 @@
                     </div>
                 </div>
 
-                {{-- Pasek postępu --}}
                 <div class="w-full bg-gray-200 rounded-full h-4 mb-6 overflow-hidden shadow-inner" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                     <div id="progressBar" class="bg-blue-500 h-4 w-0 transition-all duration-500"></div>
                 </div>
 
-                {{-- Etapy podpisu --}}
-                <ol id="signSteps" class="space-y-4">
+                <ol id="signSteps" class="space-y-4" aria-live="polite">
                     @php
                         $steps = [
-                            ['title' => 'Weryfikacja uprawnień systemu', 'desc' => 'Sprawdzenie uprawnień i serwera podpisu.'],
-                            ['title' => 'Pobranie certyfikatu użytkownika', 'desc' => 'Certyfikat pobrany dla ' . Auth::user()->name . '.'],
-                            ['title' => 'Weryfikacja integralności dokumentu XML', 'desc' => 'Sprawdzanie poprawności struktury i danych.'],
-                            ['title' => 'Proces zatwierdzania dokumentu', 'desc' => 'Dokument zostaje podpisany za pomocą algorytmów.'],
-                            ['title' => 'Szyfrowanie danych i generowanie SHA1', 'desc' => 'SHA1 zostaje wygenerowane i zapisane dla dokumentu.'],
-                            ['title' => 'Czyszczenie danych tymczasowych i finalizacja', 'desc' => 'Pliki tymczasowe są usuwane, proces kończy się sukcesem.'],
+                            ['title' => 'Weryfikacja pliku XML dokumentu', 'desc' => 'Sprawdzenie integralności pliku XML.'],
+                            ['title' => 'Weryfikacja certyfikatu Systemu', 'desc' => 'Sprawdzenie certyfikatu systemowego.'],
+                            ['title' => 'Weryfikacja certyfikatu użytkownika', 'desc' => 'Pobranie certyfikatu dla ' . Auth::user()->name],
+                            ['title' => 'Proces podpisu dokumentu', 'desc' => 'Dokument zostaje podpisany cyfrowo.'],
+                            ['title' => 'Weryfikacja kompetencji podpisu', 'desc' => 'Sprawdzenie poprawności podpisu.'],
                         ];
                     @endphp
                     @foreach($steps as $index => $step)
@@ -154,17 +142,18 @@
                     @endforeach
                 </ol>
 
-                {{-- SHA1 końcowy --}}
-                <div class="mt-8 p-4 bg-gray-100 rounded-lg shadow text-center font-mono text-gray-800 text-lg">
+                <div class="mt-8 p-4 bg-gray-100 rounded-lg shadow text-center font-mono text-gray-800 text-lg" id="liveSha">
                     SHA1 dokumentu: <span id="shaDisplay">GENEROWANY...</span>
                 </div>
+
+                <div class="mt-4 p-2 bg-gray-50 rounded-lg h-32 overflow-y-auto shadow-inner" id="activityLogs" tabindex="0" aria-label="Logi podpisu"></div>
             </div>
         </div>
 
         {{-- Modal historii --}}
         <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white p-6 rounded-lg max-w-lg w-full shadow-lg">
-                <h3 class="text-lg font-semibold mb-4">Historia podpisów karty</h3>
+            <div class="bg-white p-6 rounded-lg max-w-lg w-full shadow-lg" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+                <h3 id="historyTitle" class="text-lg font-semibold mb-4">Historia podpisów karty</h3>
                 <ul id="historyList" class="list-disc list-inside space-y-1 text-gray-700 max-h-64 overflow-y-auto" tabindex="0"></ul>
                 <button id="closeHistoryModal" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
                     Zamknij
@@ -175,65 +164,91 @@
     </div>
 
     <style>
-        .step-number.completed {
-            background-color: #3B82F6;
-            color: white;
-            border-color: #3B82F6;
-        }
-        .step.completed {
-            background-color: #E0F2FE;
-        }
+        .step-number.completed { background-color: #3B82F6; color: white; border-color: #3B82F6; }
+        .step.completed { background-color: #E0F2FE; }
     </style>
 
     <script>
-        const steps = document.querySelectorAll('.step');
-        const progressBar = document.getElementById('progressBar');
-
-        document.querySelectorAll('.sign-button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.getElementById('signModal').classList.remove('hidden');
+        const signButtons = document.querySelectorAll('.sign-button');
+        signButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.dataset.id;
+                const modal = document.getElementById('signModal');
+                const steps = document.querySelectorAll('.step');
+                const progressBar = document.getElementById('progressBar');
+                const shaDisplay = document.getElementById('shaDisplay');
+                const activityLogs = document.getElementById('activityLogs');
                 let currentStep = 0;
-                function highlightNextStep() {
+                modal.classList.remove('hidden');
+                shaDisplay.innerText = 'GENEROWANY...';
+                activityLogs.innerHTML = '';
+
+                function nextStep() {
                     if(currentStep < steps.length){
                         steps[currentStep].classList.add('completed');
                         steps[currentStep].querySelector('.step-number').classList.add('completed');
                         progressBar.style.width = ((currentStep+1)/steps.length*100) + '%';
+
+                        // Pobierz aktualne logi
+                        fetch(`/consultations/${id}/history-json`)
+                            .then(res => res.json())
+                            .then(data => {
+                                activityLogs.innerHTML = '';
+                                data.logs.forEach(log => {
+                                    const div = document.createElement('div');
+                                    div.innerText = `${log.created_at}: ${log.description}`;
+                                    activityLogs.appendChild(div);
+                                });
+                                activityLogs.scrollTop = activityLogs.scrollHeight;
+                            });
+
                         currentStep++;
-                        setTimeout(highlightNextStep, 700);
+                        setTimeout(nextStep, 1000);
+                    } else {
+                        // Zakończenie podpisu
+                        fetch(`/consultations/${id}/sign-json`, {
+                            method: 'POST',
+                            headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
+                        })
+                            .then(res => res.json())
+                            .then(data => {
+                                if(data.success){
+                                    const shaMatch = data.message.match(/SHA1: (\w+)/);
+                                    shaDisplay.innerText = shaMatch ? shaMatch[1] : 'BRAK';
+                                    setTimeout(()=> modal.classList.add('hidden'), 1500);
+                                    location.reload();
+                                } else {
+                                    alert(data.error);
+                                    modal.classList.add('hidden');
+                                }
+                            });
                     }
                 }
-                highlightNextStep();
+                nextStep();
             });
         });
 
-        document.getElementById('closeSignModal').addEventListener('click', () => {
-            document.getElementById('signModal').classList.add('hidden');
-        });
+        document.getElementById('closeSignModal').addEventListener('click', () => document.getElementById('signModal').classList.add('hidden'));
 
-        document.querySelectorAll('.history-button').forEach(button => {
-            button.addEventListener('click', function() {
-                const consultationId = this.dataset.id;
+        document.querySelectorAll('.history-button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.dataset.id;
                 const modal = document.getElementById('historyModal');
                 const list = document.getElementById('historyList');
                 list.innerHTML = '';
                 modal.classList.remove('hidden');
 
-                fetch(`/consultations/${consultationId}/history-json`)
+                fetch(`/consultations/${id}/history-json`)
                     .then(res => res.json())
                     .then(data => {
                         if(data.logs.length === 0){
                             list.innerHTML = '<li>Brak historii</li>';
                         } else {
-                            data.logs.forEach(log => {
-                                list.innerHTML += `<li>${log.created_at}: ${log.description}</li>`;
-                            });
+                            data.logs.forEach(log => list.innerHTML += `<li>${log.created_at}: ${log.description}</li>`);
                         }
-                    })
-                    .catch(err => {
-                        list.innerHTML = `<li>Błąd ładowania historii: ${err}</li>`;
-                    });
+                    }).catch(err => list.innerHTML = `<li>Błąd ładowania historii: ${err}</li>`);
 
-                document.getElementById('closeHistoryModal').onclick = ()=> modal.classList.add('hidden');
+                document.getElementById('closeHistoryModal').onclick = () => modal.classList.add('hidden');
             });
         });
     </script>
