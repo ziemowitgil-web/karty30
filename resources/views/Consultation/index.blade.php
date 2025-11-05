@@ -254,8 +254,7 @@
                 document.getElementById('historyModal').classList.add('hidden');
             });
 
-     
-            @endif
+
 
         });
     </script>
