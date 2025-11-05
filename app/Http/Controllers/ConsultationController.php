@@ -76,6 +76,7 @@ class ConsultationController extends Controller
         $validated['consultation_datetime'] = $validated['consultation_date'] . ' ' . $validated['consultation_time'];
         unset($validated['consultation_date'], $validated['consultation_time']);
 
+        // Walidacja klienta i limit godzin
         if ($validated['status'] !== 'draft' && $validated['client_id'] !== 'SYSTEM') {
             $client = Client::find($validated['client_id']);
             if ($client->blacklisted) {
@@ -84,13 +85,14 @@ class ConsultationController extends Controller
             $hoursUsed = round($validated['duration_minutes'] / 60, 2);
             $availableHours = $client->getAvailableHoursNumberAttribute();
             if (($client->used + $hoursUsed) > $availableHours) {
-                return redirect()->back()->withInput()->with('error', "Klient nie ma wystarczająco godzin (pozostało: {$availableHours}).");
+                return redirect()->back()->with('error', "Klient nie ma wystarczająco godzin (pozostało: {$availableHours}).")->withInput();
             }
             $client->used += $hoursUsed;
             $client->save();
         }
 
         $consultation = Consultation::create($validated);
+
 
         activity()->causedBy(Auth::user())
             ->performedOn($consultation)
@@ -108,6 +110,10 @@ class ConsultationController extends Controller
         $consultation->delete();
         return redirect()->route('consultations.index')->with('success', 'Konsultacja została usunięta.');
     }
+
+    // =========================================================
+    // ===================== Podpis ===========================
+    // =========================================================
 
     public function sign(Consultation $consultation, $jsonMode = false)
     {
@@ -153,13 +159,15 @@ class ConsultationController extends Controller
 
             file_put_contents($filePath, $xmlContent);
 
-            // jeśli środowisko staging -> usuwamy plik po podpisaniu
-            if(app()->environment('staging')) {
-                Log::info("Środowisko STAGING: plik {$fileName} zostanie usunięty po podpisaniu.");
+            // Jeśli STAGING, usuń plik po procesie
+            if(app()->environment('staging')){
+                register_shutdown_function(function() use ($filePath){
+                    if(file_exists($filePath)) unlink($filePath);
+                });
             }
 
             $sha1 = @sha1_file($filePath);
-            if(!$sha1) {
+            if(!$sha1){
                 $sha1 = substr(str_shuffle('abcdef0123456789'), 0, 40);
                 Log::error("Nie udało się wygenerować SHA1 dla konsultacji {$consultation->id}, wygenerowano losowy skrót {$sha1}");
             }
@@ -171,45 +179,34 @@ class ConsultationController extends Controller
 
             activity()->causedBy(Auth::user())->performedOn($consultation)->log("Karta podpisana, SHA1: {$sha1}");
 
-            if(app()->environment('staging')) {
-                @unlink($filePath);
-                Log::info("Środowisko STAGING: plik {$fileName} został usunięty po podpisaniu.");
-            }
-
             $msg = "Karta konsultacyjna o ID {$consultation->id} podpisana. SHA1: {$sha1}";
 
-            if ($jsonMode) return $msg;
+            if($jsonMode) return $msg;
             return redirect()->back()->with('success', $msg);
 
-        } catch (\Exception $e) {
-            if ($jsonMode) throw $e;
+        } catch (\Exception $e){
+            if($jsonMode) throw $e;
             return redirect()->back()->with('error','Błąd podpisu: '.$e->getMessage());
         }
     }
 
     public function signJson(Consultation $consultation)
     {
-        try {
-            $resultMessage = $this->sign($consultation, true);
+        try{
+            $msg = $this->sign($consultation, true);
 
             return response()->json([
                 'success' => true,
-                'message' => $resultMessage,
+                'message' => $msg,
                 'sha1' => $consultation->sha1sum
             ]);
-        } catch (\Exception $e) {
+        } catch (\Exception $e){
             Log::error("Błąd podpisu konsultacji {$consultation->id}: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage()
             ], 500);
         }
-    }
-
-    public function history(Consultation $consultation)
-    {
-        $logs = $consultation->activities()->latest()->get();
-        return view('Consultation.history', compact('consultation', 'logs'));
     }
 
     public function historyJson(Consultation $consultation)
@@ -221,55 +218,19 @@ class ConsultationController extends Controller
         ]);
     }
 
-    public function print(Consultation $consultation)
-    {
-        if ($consultation->status === 'draft') abort(403, 'Nie można drukować wersji roboczej');
-
-        activity()->causedBy(Auth::user())
-            ->performedOn($consultation)
-            ->log("PDF konsultacji wydrukowany przez " . Auth::user()->name);
-
-        return $this->downloadPdf($consultation);
-    }
-
+    // PDF / XML
     public function downloadPdf(Consultation $consultation)
     {
-        if (!$consultation->sha1sum) {
-            abort(403, 'Konsultacja nie została jeszcze podpisana.');
-        }
-
+        if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
         $mpdf = new Mpdf();
-
-        $html = '
-        <h1>Konsultacja #' . $consultation->id . '</h1>
-        <table style="width:100%; border-collapse: collapse;">
-            <tr>
-                <td><strong>Klient:</strong></td>
-                <td>' . ($consultation->client->name ?? '-') . '</td>
-            </tr>
-            <tr>
-                <td><strong>Data i godzina:</strong></td>
-                <td>' . \Carbon\Carbon::parse($consultation->consultation_datetime)->format('d.m.Y H:i') . '</td>
-            </tr>
-            <tr>
-                <td><strong>Czas trwania:</strong></td>
-                <td>' . $consultation->duration_minutes . ' min</td>
-            </tr>
-            <tr>
-                <td><strong>Przeprowadził:</strong></td>
-                <td>' . ($consultation->user->name ?? '-') . '</td>
-            </tr>
-            <tr>
-                <td><strong>Opis:</strong></td>
-                <td>' . nl2br(htmlspecialchars($consultation->description)) . '</td>
-            </tr>
-            <tr>
-                <td><strong>SHA1:</strong></td>
-                <td><span style="font-family: monospace;">' . $consultation->sha1sum . '</span></td>
-            </tr>
-        </table>
-        ';
-
+        $html = '<h1>Konsultacja #' . $consultation->id . '</h1><table style="width:100%; border-collapse: collapse;">
+            <tr><td><strong>Klient:</strong></td><td>' . ($consultation->client->name ?? '-') . '</td></tr>
+            <tr><td><strong>Data i godzina:</strong></td><td>' . \Carbon\Carbon::parse($consultation->consultation_datetime)->format('d.m.Y H:i') . '</td></tr>
+            <tr><td><strong>Czas trwania:</strong></td><td>' . $consultation->duration_minutes . ' min</td></tr>
+            <tr><td><strong>Przeprowadził:</strong></td><td>' . ($consultation->user->name ?? '-') . '</td></tr>
+            <tr><td><strong>Opis:</strong></td><td>' . nl2br(htmlspecialchars($consultation->description)) . '</td></tr>
+            <tr><td><strong>SHA1:</strong></td><td><span style="font-family: monospace;">' . $consultation->sha1sum . '</span></td></tr>
+        </table>';
         $mpdf->WriteHTML($html);
         return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
     }
