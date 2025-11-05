@@ -240,4 +240,29 @@ class ConsultationController extends Controller
         $xmlContent = $consultation->toXml();
         return response($xmlContent, 200)->header('Content-Type', 'application/xml');
     }
+
+    /**
+     * Usuń dane testowe (STAGING)
+     */
+    public function deleteTestData(Request $request)
+    {
+        if(!app()->environment('staging')){
+            abort(403, 'Brak dostępu.');
+        }
+
+        $dir = app_path('signed_docs');
+        $filesDeleted = 0;
+
+        if(file_exists($dir)){
+            foreach(glob($dir . '/*') as $file){
+                if(is_file($file)){
+                    unlink($file);
+                    $filesDeleted++;
+                }
+            }
+        }
+
+        return response()->json(['message' => "Usunięto $filesDeleted plików testowych."]);
+    }
+
 }
