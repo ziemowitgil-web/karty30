@@ -13,7 +13,6 @@
                    class="inline-flex items-center bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Nowa rezerwacja
                 </a>
-
             </div>
         </div>
 
@@ -82,13 +81,16 @@
 
                             <!-- Akcje -->
                             <td class="px-4 py-3 flex flex-col gap-1">
-                                <a href="{{ route('schedules.schedules.rescheduleForm', $schedule) }}" class="text-indigo-700 hover:underline text-sm">Zmień termin</a>
+                                <!-- Zmień termin -->
+                                <a href="{{ route('schedules.rescheduleForm', $schedule) }}" class="text-indigo-700 hover:underline text-sm">Zmień termin</a>
 
+                                <!-- Usuń -->
                                 <form action="{{ route('schedules.destroy', $schedule) }}" method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć ten termin?');">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-red-700 hover:underline text-sm">Usuń</button>
                                 </form>
 
+                                <!-- Potwierdzenie wstępne -->
                                 @if($schedule->status === 'preliminary')
                                     <form action="{{ route('schedules.markAttendance', $schedule) }}" method="POST">
                                         @csrf
@@ -99,6 +101,7 @@
                                     </form>
                                 @endif
 
+                                <!-- Oznacz jako obecność -->
                                 @if($schedule->status !== 'attended')
                                     <form action="{{ route('schedules.markAttendance', $schedule) }}" method="POST">
                                         @csrf
@@ -106,6 +109,7 @@
                                     </form>
                                 @endif
 
+                                <!-- Anulowanie -->
                                 @if(in_array($schedule->status, ['preliminary','confirmed']))
                                     <form action="{{ route('schedules.cancelByFeer', $schedule) }}" method="POST">
                                         @csrf
