@@ -159,7 +159,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{consultation}/history', [ConsultationController::class, 'history'])->name('history');
         Route::get('/{consultation}/pdf', [ConsultationController::class, 'downloadPdf'])->name('pdf');
         Route::get('/{consultation}/xml', [ConsultationController::class, 'xml'])->name('xml');
-
+        Route::get('/consultations/{consultation}/details', [ConsultationController::class, 'details'])
+            ->name('consultations.details');
         // Test staging
         Route::post('/delete-test-data', [ConsultationController::class, 'deleteTestData'])->name('deleteTestData');
     });

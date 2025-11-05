@@ -263,4 +263,10 @@ class ConsultationController extends Controller
 
         return response()->json(['message' => "Usunięto $filesDeleted plików testowych."]);
     }
+
+    public function details(Consultation $consultation)
+    {
+        return view('Consultation.details', compact('consultation'));
+    }
+
 }
