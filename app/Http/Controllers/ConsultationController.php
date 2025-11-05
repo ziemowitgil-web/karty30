@@ -12,28 +12,11 @@ use Mpdf\Mpdf;
 
 class ConsultationController extends Controller
 {
-    // =========================================================
-    // ===================== Konstruktor ======================
-    // =========================================================
-
-    /**
-     * Apply authentication middleware
-     */
     public function __construct()
     {
         $this->middleware('auth');
     }
 
-    // =========================================================
-    // ===================== Lista konsultacji ================
-    // =========================================================
-
-    /**
-     * Display a listing of consultations.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\View\View
-     */
     public function index(Request $request)
     {
         $query = Consultation::with('client', 'user');
@@ -57,11 +40,6 @@ class ConsultationController extends Controller
         return view('Consultation.index', compact('consultations'));
     }
 
-    /**
-     * Show the form for creating a new consultation.
-     *
-     * @return \Illuminate\View\View
-     */
     public function create()
     {
         $clients = Client::orderBy('name')->get();
@@ -73,16 +51,6 @@ class ConsultationController extends Controller
         return view('Consultation.create', compact('clients', 'schedules'));
     }
 
-    // =========================================================
-    // ===================== Tworzenie konsultacji ============
-    // =========================================================
-
-    /**
-     * Store a newly created consultation in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -108,7 +76,6 @@ class ConsultationController extends Controller
         $validated['consultation_datetime'] = $validated['consultation_date'] . ' ' . $validated['consultation_time'];
         unset($validated['consultation_date'], $validated['consultation_time']);
 
-        // Walidacja klienta i limit godzin
         if ($validated['status'] !== 'draft' && $validated['client_id'] !== 'SYSTEM') {
             $client = Client::find($validated['client_id']);
             if ($client->blacklisted) {
@@ -132,16 +99,6 @@ class ConsultationController extends Controller
         return redirect()->route('consultations.index')->with('success', 'Konsultacja została dodana.');
     }
 
-    // =========================================================
-    // ===================== Usuwanie =========================
-    // =========================================================
-
-    /**
-     * Remove the specified consultation from storage.
-     *
-     * @param  \App\Models\Consultation  $consultation
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function destroy(Consultation $consultation)
     {
         activity()->causedBy(Auth::user())
@@ -152,17 +109,6 @@ class ConsultationController extends Controller
         return redirect()->route('consultations.index')->with('success', 'Konsultacja została usunięta.');
     }
 
-    // =========================================================
-    // ===================== Podpis konsultacji ===============
-    // =========================================================
-
-    /**
-     * Sign a consultation (normal or JSON mode)
-     *
-     * @param Consultation $consultation
-     * @param bool $jsonMode
-     * @return mixed
-     */
     public function sign(Consultation $consultation, $jsonMode = false)
     {
         if ($consultation->status !== 'draft') {
@@ -207,6 +153,11 @@ class ConsultationController extends Controller
 
             file_put_contents($filePath, $xmlContent);
 
+            // jeśli środowisko staging -> usuwamy plik po podpisaniu
+            if(app()->environment('staging')) {
+                Log::info("Środowisko STAGING: plik {$fileName} zostanie usunięty po podpisaniu.");
+            }
+
             $sha1 = @sha1_file($filePath);
             if(!$sha1) {
                 $sha1 = substr(str_shuffle('abcdef0123456789'), 0, 40);
@@ -220,6 +171,11 @@ class ConsultationController extends Controller
 
             activity()->causedBy(Auth::user())->performedOn($consultation)->log("Karta podpisana, SHA1: {$sha1}");
 
+            if(app()->environment('staging')) {
+                @unlink($filePath);
+                Log::info("Środowisko STAGING: plik {$fileName} został usunięty po podpisaniu.");
+            }
+
             $msg = "Karta konsultacyjna o ID {$consultation->id} podpisana. SHA1: {$sha1}";
 
             if ($jsonMode) return $msg;
@@ -231,19 +187,15 @@ class ConsultationController extends Controller
         }
     }
 
-    /**
-     * AJAX JSON endpoint to sign consultation
-     *
-     * @param Consultation $consultation
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function signJson(Consultation $consultation)
     {
         try {
-            $result = $this->sign($consultation, true);
+            $resultMessage = $this->sign($consultation, true);
+
             return response()->json([
                 'success' => true,
-                'message' => $result
+                'message' => $resultMessage,
+                'sha1' => $consultation->sha1sum
             ]);
         } catch (\Exception $e) {
             Log::error("Błąd podpisu konsultacji {$consultation->id}: {$e->getMessage()}");
@@ -254,22 +206,12 @@ class ConsultationController extends Controller
         }
     }
 
-    // =========================================================
-    // ===================== Historia =========================
-    // =========================================================
-
-    /**
-     * Show consultation signing history (Blade view)
-     */
     public function history(Consultation $consultation)
     {
         $logs = $consultation->activities()->latest()->get();
         return view('Consultation.history', compact('consultation', 'logs'));
     }
 
-    /**
-     * Show consultation signing history (JSON AJAX)
-     */
     public function historyJson(Consultation $consultation)
     {
         $logs = $consultation->activities()->latest()->get(['description','created_at']);
@@ -279,13 +221,6 @@ class ConsultationController extends Controller
         ]);
     }
 
-    // =========================================================
-    // ===================== PDF / XML ========================
-    // =========================================================
-
-    /**
-     * Generate PDF for consultation (example)
-     */
     public function print(Consultation $consultation)
     {
         if ($consultation->status === 'draft') abort(403, 'Nie można drukować wersji roboczej');
@@ -294,12 +229,9 @@ class ConsultationController extends Controller
             ->performedOn($consultation)
             ->log("PDF konsultacji wydrukowany przez " . Auth::user()->name);
 
-        return $this->generatePdf($consultation);
+        return $this->downloadPdf($consultation);
     }
 
-    /**
-     * Download consultation PDF
-     */
     public function downloadPdf(Consultation $consultation)
     {
         if (!$consultation->sha1sum) {
@@ -339,16 +271,12 @@ class ConsultationController extends Controller
         ';
 
         $mpdf->WriteHTML($html);
-        return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I'); // 'I' = podgląd
+        return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
     }
 
-    /**
-     * Generate XML for consultation
-     */
     public function xml(Consultation $consultation)
     {
-        $xmlContent = $consultation->toXml(); // metoda generująca XML
-        return response($xmlContent, 200)
-            ->header('Content-Type', 'application/xml');
+        $xmlContent = $consultation->toXml();
+        return response($xmlContent, 200)->header('Content-Type', 'application/xml');
     }
 }
