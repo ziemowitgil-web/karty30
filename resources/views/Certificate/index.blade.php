@@ -48,7 +48,7 @@
                         <p class="text-yellow-600 mt-4">To jest certyfikat testowy (staging).</p>
                     @endif
 
-                    
+
                 </div>
 
                 {{-- Prawa kolumna: akcje --}}
@@ -88,7 +88,7 @@
             const generateBtn = document.getElementById('generate-cert');
             if (generateBtn) {
                 generateBtn.addEventListener('click', function () {
-                    fetch('{{ route("certificate.generate") }}', {
+                    fetch('{{ route("consultation.certificate.generate") }}', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': token,
@@ -111,7 +111,7 @@
                 revokeBtn.addEventListener('click', function () {
                     if (!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
 
-                    fetch('{{ route("certificate.revoke") }}', {
+                    fetch('{{ route("consultation.certificate.revoke") }}', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': token,
