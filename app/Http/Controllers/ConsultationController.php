@@ -522,8 +522,29 @@ class ConsultationController extends Controller
         }
     }
 
+    public function revokeCertificate(Request $request)
+    {
+        $user = auth()->user();
+        $revoked = CertificateService::revokeForUser($user);
 
+        $message = $revoked ? 'Certyfikat został cofnięty.' : 'Nie udało się cofnąć certyfikatu.';
+        return redirect()->route('consultations.certificate.view')->with('success', $message);
+    }
 
+    public function downloadCertificate()
+    {
+        $user = auth()->user();
+        $cert = CertificateService::getCertificateForUser($user);
+
+        if (!$cert) {
+            return redirect()->route('consultations.certificate.view')
+                ->with('error', 'Brak certyfikatu do pobrania.');
+        }
+
+        return response()->streamDownload(function() use ($cert) {
+            echo $cert->content;
+        }, $cert->filename);
+    }
 
 
 }

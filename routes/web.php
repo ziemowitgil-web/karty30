@@ -169,6 +169,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/certificate', [ConsultationController::class, 'certificateDetailsView'])->name('certificate.view');
         Route::post('/certificate/generate', [ConsultationController::class, 'generateCertificate'])->name('certificate.generate');
         Route::post('/certificate/access', [ConsultationController::class, 'generateCertificate'])->name('certificate.access');
+        Route::post('/certificate/revoke', [ConsultationController::class, 'revokeCertificate'])->name('certificate.revoke');
+        Route::get('/certificate/download', [ConsultationController::class, 'downloadCertificate'])->name('certificate.download');
 
 
     });
