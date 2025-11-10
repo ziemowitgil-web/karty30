@@ -2,13 +2,128 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Consultation;
+use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Models\Consultation;
+use Mpdf\Mpdf;
 
 class ConsultationController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    // =========================================================
+    // ===================== LISTA ============================
+    // =========================================================
+    public function index(Request $request)
+    {
+        $query = Consultation::with('client', 'user');
+
+        if ($request->filled('month')) {
+            $month = $request->month;
+            $query->whereYear('consultation_datetime', substr($month, 0, 4))
+                ->whereMonth('consultation_datetime', substr($month, 5, 2));
+        }
+
+        if ($request->filled('year')) {
+            $query->whereYear('consultation_datetime', $request->year);
+        }
+
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        $consultations = $query->get();
+
+        return view('Consultation.index', compact('consultations'));
+    }
+
+    // =========================================================
+    // ===================== FORMULARZ ========================
+    // =========================================================
+    public function create()
+    {
+        $clients = Client::orderBy('name')->get();
+        $schedules = \App\Models\Schedule::with('client')
+            ->where('status', 'confirmed')
+            ->orderBy('start_time', 'asc')
+            ->get(['id', 'client_id', 'start_time', 'duration_minutes']);
+
+        return view('Consultation.create', compact('clients', 'schedules'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'schedule_id' => 'nullable|exists:schedules,id',
+            'client_id' => ['required', function ($attr, $value, $fail) {
+                if ($value !== 'SYSTEM' && !Client::where('id', $value)->exists()) {
+                    $fail('Wybrany klient nie istnieje.');
+                }
+            }],
+            'consultation_date' => 'required|date',
+            'consultation_time' => 'required|date_format:H:i',
+            'duration_minutes' => 'required|integer|min:15|max:1440',
+            'description' => 'nullable|string|max:1000',
+            'next_action' => 'nullable|string|max:255',
+            'status' => 'required|in:draft,pending_system,pending_signature,completed',
+            'sign_type' => 'nullable|in:qualified,eid,feer',
+        ]);
+
+        $validated['consultation_datetime'] = $validated['consultation_date'] . ' ' . $validated['consultation_time'];
+        unset($validated['consultation_date'], $validated['consultation_time']);
+
+        $validated['user_id'] = Auth::id();
+        $validated['user_email'] = Auth::user()->email;
+        $validated['username'] = Auth::user()->name;
+        $validated['user_ip'] = $request->ip();
+
+        // Walidacja klienta (czarna lista i limit godzin)
+        if ($validated['status'] !== 'draft' && $validated['client_id'] !== 'SYSTEM') {
+            $client = Client::find($validated['client_id']);
+            if ($client->blacklisted) {
+                return redirect()->back()->withInput()->with('error', 'Nie można utworzyć konsultacji dla klienta na czarnej liście.');
+            }
+            $hoursUsed = round($validated['duration_minutes'] / 60, 2);
+            $availableHours = $client->getAvailableHoursNumberAttribute();
+            if (($client->used + $hoursUsed) > $availableHours) {
+                return redirect()->back()->withInput()->with('error', "Klient nie ma wystarczająco godzin (pozostało: {$availableHours}).");
+            }
+            $client->used += $hoursUsed;
+            $client->save();
+        }
+
+        $consultation = Consultation::create($validated);
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($consultation)
+            ->log("Konsultacja utworzona (status: {$validated['status']})");
+
+        return redirect()->route('consultations.index')->with('success', 'Konsultacja została dodana.');
+    }
+
+    // =========================================================
+    // ===================== USUWANIE =========================
+    // =========================================================
+    public function destroy(Consultation $consultation)
+    {
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($consultation)
+            ->log("Konsultacja usunięta przez " . Auth::user()->name);
+
+        $consultation->delete();
+        return redirect()->route('consultations.index')->with('success', 'Konsultacja została usunięta.');
+    }
+
+    // =========================================================
+    // ===================== PODPIS ===========================
+    // =========================================================
     public function sign(Consultation $consultation, $jsonMode = false)
     {
         if ($consultation->status !== 'draft') {
@@ -30,7 +145,7 @@ class ConsultationController extends Controller
 
             activity()->causedBy(Auth::user())->performedOn($consultation)->log("Weryfikacja certyfikatu użytkownika POWIODŁA");
 
-            // --- Dodatkowy krok w przypadku generowania certyfikatu testowego ---
+            // Dodatkowy krok w przypadku generowania certyfikatu testowego
             if ($testCertFlag) {
                 activity()->causedBy(Auth::user())->performedOn($consultation)
                     ->log("Wygenerowano certyfikat testowy dla środowiska staging");
@@ -60,7 +175,6 @@ class ConsultationController extends Controller
 
             // Odczyt certyfikatu użytkownika
             $certPath = storage_path("certs/".Auth::user()->id."_user_cert.pem");
-
             $certContent = file_get_contents($certPath);
             $cert = openssl_x509_read($certContent);
             $certData = openssl_x509_parse($cert);
@@ -141,10 +255,67 @@ class ConsultationController extends Controller
         }
     }
 
-    /**
-     * Weryfikuje certyfikat po e-mailu. W staging generuje certyfikat testowy, ważny 6 godzin.
-     * Dodatkowo ustawia flagę $testCertFlag, jeśli certyfikat testowy został wygenerowany.
-     */
+    public function historyJson(Consultation $consultation)
+    {
+        $logs = $consultation->activities()->latest()->get(['description','created_at']);
+        return response()->json([
+            'consultation_id' => $consultation->id,
+            'logs' => $logs
+        ]);
+    }
+
+    // =========================================================
+    // ===================== PDF / XML ========================
+    // =========================================================
+    public function downloadPdf(Consultation $consultation)
+    {
+        if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
+
+        $mpdf = new Mpdf();
+        $html = view('Consultation.pdf', compact('consultation'))->render();
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
+    }
+
+    public function xml(Consultation $consultation)
+    {
+        $xmlContent = $consultation->toXml();
+        return response($xmlContent, 200)->header('Content-Type', 'application/xml');
+    }
+
+    // =========================================================
+    // ===================== STAGING TEST =====================
+    // =========================================================
+    public function deleteTestData(Request $request)
+    {
+        if(!app()->environment('staging')){
+            abort(403, 'Brak dostępu.');
+        }
+
+        $dir = app_path('signed_docs');
+        $filesDeleted = 0;
+
+        if(file_exists($dir)){
+            foreach(glob($dir . '/*') as $file){
+                if(is_file($file)){
+                    unlink($file);
+                    $filesDeleted++;
+                }
+            }
+        }
+
+        return response()->json(['message' => "Usunięto $filesDeleted plików testowych."]);
+    }
+
+    public function details(Consultation $consultation)
+    {
+        return view('Consultation.details', compact('consultation'));
+    }
+
+    // =========================================================
+    // ===================== CERTYFIKAT =======================
+    // =========================================================
     protected function verifyCertificateByEmail($user, &$testCertFlag = false)
     {
         $certPath = storage_path("certs/{$user->id}_user_cert.pem");
@@ -186,22 +357,4 @@ class ConsultationController extends Controller
             }
         }
 
-        if (!file_exists($certPath)) return false;
-
-        $certContent = file_get_contents($certPath);
-        $cert = openssl_x509_read($certContent);
-        if (!$cert) return false;
-
-        $certData = openssl_x509_parse($cert);
-        if (!$certData) return false;
-
-        $validFrom = $certData['validFrom_time_t'] ?? 0;
-        $validTo = $certData['validTo_time_t'] ?? 0;
-        if ($now < $validFrom || $now > $validTo) return false;
-
-        $certEmail = $certData['subject']['emailAddress'] ?? null;
-        if (!$certEmail) return false;
-
-        return strtolower($certEmail) === strtolower($user->email);
-    }
-}
+        if (!fil
