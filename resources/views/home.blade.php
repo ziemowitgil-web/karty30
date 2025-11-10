@@ -96,10 +96,7 @@
                             Mimo że certyfikaty wydaje Ziemowit Gil, możesz go samodzielnie wygenerować w zakładce
                             <a href="{{ route('consultations.certificate.view') }}" class="text-blue-600 hover:underline">Zarządzaj certyfikatem</a>.
                         </p>
-                        <a href="{{ route('consultations.certificate.view') }}"
-                           class="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-medium rounded-lg shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none transition">
-                            <i class="fas fa-id-card"></i> Zarządzaj certyfikatem
-                        </a>
+                        
                         <div class="text-sm text-gray-700 mt-3 leading-snug">
                             <p><strong>W przypadku problemów:</strong></p>
                             <p>Ziemowit Gil — <a href="mailto:ziemowit.gil@feer.org.pl" class="text-blue-600 hover:underline">ziemowit.gil@feer.org.pl</a></p>
