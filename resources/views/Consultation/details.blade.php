@@ -3,86 +3,143 @@
 @section('content')
     <div class="container mx-auto p-6 max-w-4xl">
 
-        <h1 class="text-3xl font-bold mb-6 text-gray-900">Szczegóły konsultacji #{{ $consultation->id }}</h1>
+        <h1 class="text-3xl font-bold mb-6 text-gray-900">Certyfikat użytkownika</h1>
 
-        {{-- Akcje --}}
-        <div class="flex gap-3 mb-6">
-            @if($consultation->status === 'draft')
-                <form method="POST" action="{{ route('consultations.sign', $consultation) }}">
-                    @csrf
-                    <button type="submit"
-                            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:ring-2 focus:ring-green-300 focus:outline-none">
-                        Podpisz konsultację
-                    </button>
-                </form>
-            @endif
-            @if($consultation->sha1sum)
-                <a href="{{ route('consultations.pdf', $consultation) }}" target="_blank"
-                   class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:ring-2 focus:ring-blue-300 focus:outline-none">
-                    Pobierz PDF
-                </a>
-                <a href="{{ route('consultations.xml', $consultation) }}" target="_blank"
-                   class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 focus:ring-2 focus:ring-gray-300 focus:outline-none">
-                    Pobierz XML
-                </a>
-            @endif
-        </div>
+        {{-- Alerty AJAX --}}
+        <div id="alert-container" aria-live="polite" class="mb-4"></div>
 
-        {{-- Szczegóły konsultacji --}}
-        <div class="bg-white p-6 rounded shadow mb-6">
-            <table class="w-full table-auto border-collapse">
-                <tr>
-                    <td class="font-medium py-2 px-4 border-b">Klient</td>
-                    <td class="py-2 px-4 border-b">{{ $consultation->client->name ?? 'SYSTEM' }}</td>
-                </tr>
-                <tr>
-                    <td class="font-medium py-2 px-4 border-b">Data i godzina</td>
-                    <td class="py-2 px-4 border-b">{{ \Carbon\Carbon::parse($consultation->consultation_datetime)->format('d.m.Y H:i') }}</td>
-                </tr>
-                <tr>
-                    <td class="font-medium py-2 px-4 border-b">Czas trwania</td>
-                    <td class="py-2 px-4 border-b">{{ $consultation->duration_minutes }} min</td>
-                </tr>
-                <tr>
-                    <td class="font-medium py-2 px-4 border-b">Przeprowadził</td>
-                    <td class="py-2 px-4 border-b">{{ $consultation->user->name ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td class="font-medium py-2 px-4 border-b">Opis / notatka</td>
-                    <td class="py-2 px-4 border-b">{!! nl2br(e($consultation->description)) !!}</td>
-                </tr>
-                <tr>
-                    <td class="font-medium py-2 px-4 border-b">Dalsze działania</td>
-                    <td class="py-2 px-4 border-b">{{ $consultation->next_action ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td class="font-medium py-2 px-4 border-b">Status</td>
-                    <td class="py-2 px-4 border-b">{{ ucfirst($consultation->status) }}</td>
-                </tr>
-                @if($consultation->sha1sum)
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">SHA1</td>
-                        <td class="py-2 px-4 border-b font-mono break-all">{{ $consultation->sha1sum }}</td>
-                    </tr>
-                @endif
-            </table>
-        </div>
-
-        {{-- Historia aktywności --}}
-        <div class="bg-white p-6 rounded shadow">
-            <h2 class="text-2xl font-semibold mb-4">Historia działań</h2>
-            @if($consultation->activities->count())
-                <ul class="divide-y divide-gray-200">
-                    @foreach($consultation->activities as $activity)
-                        <li class="py-2 flex justify-between items-center">
-                            <span>{!! nl2br(e($activity->description)) !!}</span>
-                            <span class="text-gray-500 text-sm">{{ $activity->created_at->format('d.m.Y H:i') }}</span>
-                        </li>
-                    @endforeach
-                </ul>
+        {{-- Certyfikat --}}
+        <div id="certificate-data">
+            @if($certExists && $certData)
+                <div class="bg-white rounded shadow mb-6">
+                    <div class="p-6">
+                        <table class="w-full table-auto border-collapse">
+                            <tr>
+                                <td class="font-medium py-2 px-4 border-b">Imię i nazwisko</td>
+                                <td class="py-2 px-4 border-b">{{ $certData['common_name'] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-medium py-2 px-4 border-b">Email</td>
+                                <td class="py-2 px-4 border-b">{{ $certData['email'] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-medium py-2 px-4 border-b">Organizacja</td>
+                                <td class="py-2 px-4 border-b">{{ $certData['organization'] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-medium py-2 px-4 border-b">Jednostka organizacyjna</td>
+                                <td class="py-2 px-4 border-b">{{ $certData['organizational_unit'] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-medium py-2 px-4 border-b">Ważny od</td>
+                                <td class="py-2 px-4 border-b">{{ $certData['valid_from'] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-medium py-2 px-4 border-b">Ważny do</td>
+                                <td class="py-2 px-4 border-b">{{ $certData['valid_to'] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-medium py-2 px-4 border-b">SHA1</td>
+                                <td class="py-2 px-4 border-b font-mono break-all">{{ $certData['sha1'] }}</td>
+                            </tr>
+                            @if($isTestCert)
+                                <tr>
+                                    <td colspan="2">
+                                        <div class="alert alert-warning mt-3" role="alert">
+                                            To jest certyfikat testowy (staging).
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
+                            @if(auth()->user()->is_root)
+                                <tr>
+                                    <td colspan="2">
+                                        <div class="alert alert-info mt-3" role="alert">
+                                            Certyfikat systemowy oraz certyfikat do komunikacji API są ważne.
+                                            Tylko użytkownik root widzi pełne dane.
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
+                        </table>
+                    </div>
+                    <div class="p-6 flex gap-3">
+                        <button id="download-cert" class="btn btn-success" aria-label="Pobierz certyfikat">
+                            <i class="bi bi-download"></i> Pobierz certyfikat
+                        </button>
+                        <button id="revoke-cert" class="btn btn-danger" aria-label="Cofnij certyfikat">
+                            <i class="bi bi-x-circle"></i> Cofnij certyfikat
+                        </button>
+                    </div>
+                </div>
             @else
-                <p class="text-gray-500">Brak aktywności dla tej konsultacji.</p>
+                <div class="alert alert-warning mb-3" role="alert">
+                    Brak certyfikatu. Możesz wygenerować nowy certyfikat.
+                </div>
+                <button id="generate-cert" class="btn btn-primary" aria-label="Generuj certyfikat">
+                    <i class="bi bi-plus-circle"></i> Generuj certyfikat
+                </button>
             @endif
         </div>
+
     </div>
+@endsection
+
+@section('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = '{{ csrf_token() }}';
+
+            function showAlert(message, type = 'info') {
+                const container = document.getElementById('alert-container');
+                container.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                                    ${message}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                               </div>`;
+            }
+
+            // Generowanie certyfikatu
+            const generateBtn = document.getElementById('generate-cert');
+            if (generateBtn) {
+                generateBtn.addEventListener('click', function () {
+                    fetch('{{ route("consultations.certificate.generate") }}', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            showAlert(data.message, data.success ? 'success' : 'danger');
+                            if(data.success) setTimeout(() => location.reload(), 500);
+                        })
+                        .catch(() => showAlert('Błąd generowania certyfikatu', 'danger'));
+                });
+            }
+
+            // Cofanie certyfikatu
+            const revokeBtn = document.getElementById('revoke-cert');
+            if (revokeBtn) {
+                revokeBtn.addEventListener('click', function () {
+                    if(!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
+                    fetch('{{ route("consultations.certificate.revoke") }}', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            showAlert(data.message, data.success ? 'success' : 'danger');
+                            if(data.success) setTimeout(() => location.reload(), 500);
+                        })
+                        .catch(() => showAlert('Błąd cofania certyfikatu', 'danger'));
+                });
+            }
+
+            // Pobranie certyfikatu
+            const downloadBtn = document.getElementById('download-cert');
+            if(downloadBtn) {
+                downloadBtn.addEventListener('click', function () {
+                    window.location.href = '{{ route("consultations.certificate.download") }}';
+                });
+            }
+        });
+    </script>
 @endsection
