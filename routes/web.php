@@ -167,6 +167,7 @@ Route::middleware(['auth'])->group(function () {
         // Certyfikat
         Route::get('/certificate/json', [ConsultationController::class, 'certificateDetails'])->name('certificate.json');
         Route::get('/certificate', [ConsultationController::class, 'certificateDetailsView'])->name('certificate.view');
+        Route::get('/certificate/generate', [ConsultationController::class, 'generateCertificate'])->name('certificate.generate');
 
 
     });

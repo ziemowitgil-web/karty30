@@ -468,6 +468,66 @@ class ConsultationController extends Controller
         ]);
     }
 
+    public function generateCertificate(Request $request)
+    {
+        $user = Auth::user();
+        $certPath = storage_path("certs/{$user->id}_user_cert.pem");
+        $testCertFlag = false;
+
+        try {
+            $dn = [
+                "countryName" => "PL",
+                "stateOrProvinceName" => "Malopolska",
+                "localityName" => "Nowy Sacz",
+                "organizationName" => "FEER",
+                "organizationalUnitName" => "Certyfikaty",
+                "commonName" => $user->name,
+                "emailAddress" => $user->email
+            ];
+
+            $privateKey = openssl_pkey_new([
+                "private_key_type" => OPENSSL_KEYTYPE_RSA,
+                "private_key_bits" => 2048,
+            ]);
+
+            $csr = openssl_csr_new($dn, $privateKey);
+
+            // W środowisku staging generujemy krótko ważny certyfikat testowy
+            $validity = app()->environment('staging') ? 0.25 : 365*24*60*60; // 0.25 dnia = 6h
+            $cert = openssl_csr_sign($csr, null, $privateKey, $validity);
+
+            $certPem = '';
+            openssl_x509_export($cert, $certPem);
+            file_put_contents($certPath, $certPem);
+
+            if (app()->environment('staging')) {
+                $testCertFlag = true;
+            }
+
+            $certData = openssl_x509_parse($cert);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Certyfikat wygenerowany.',
+                'certificate' => [
+                    'common_name' => $certData['subject']['CN'] ?? null,
+                    'email' => $certData['subject']['emailAddress'] ?? null,
+                    'organization' => $certData['subject']['O'] ?? null,
+                    'organizational_unit' => $certData['subject']['OU'] ?? null,
+                    'valid_from' => isset($certData['validFrom_time_t']) ? date('c', $certData['validFrom_time_t']) : null,
+                    'valid_to' => isset($certData['validTo_time_t']) ? date('c', $certData['validTo_time_t']) : null,
+                    'sha1' => sha1($certPem),
+                    'is_test_certificate' => $testCertFlag,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Błąd generowania certyfikatu dla użytkownika {$user->id}: ".$e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Błąd generowania certyfikatu: '.$e->getMessage()
+            ], 500);
+        }
+    }
 
 
 
