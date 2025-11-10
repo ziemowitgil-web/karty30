@@ -2,7 +2,13 @@
 
 @section('content')
     <div class="container">
-        <h1>Certyfikat użytkownika</h1>
+        <h1 class="mb-4">Certyfikat użytkownika</h1>
+
+        @if(session('success'))
+            <div class="alert alert-success">
+                {{ session('success') }}
+            </div>
+        @endif
 
         @if($certExists && $certData)
             <div class="card mb-3">
@@ -21,7 +27,7 @@
                 </div>
             </div>
         @else
-            <div class="alert alert-warning">
+            <div class="alert alert-warning mb-3">
                 Brak certyfikatu. Możesz wygenerować nowy certyfikat.
             </div>
 
