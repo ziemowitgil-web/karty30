@@ -434,16 +434,13 @@ class ConsultationController extends Controller
 
         $certData = null;
         $isTestCert = false;
+        $certExists = false;
 
         if (file_exists($certPath)) {
             $certContent = file_get_contents($certPath);
-
-            // Spróbuj wczytać certyfikat
             $certResource = @openssl_x509_read($certContent);
-
             if ($certResource !== false) {
                 $parsed = @openssl_x509_parse($certResource);
-
                 if ($parsed !== false) {
                     $certData = [
                         'common_name' => $parsed['subject']['CN'] ?? null,
@@ -454,19 +451,15 @@ class ConsultationController extends Controller
                         'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : null,
                         'sha1' => sha1($certContent),
                     ];
-
-                    // Sprawdzenie certyfikatu testowego: staging + ważność < 6h
+                    $certExists = true;
                     $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) <= 6 * 3600);
                 }
             }
         }
 
-        return view('Certificate.index', [
-            'certData' => $certData,
-            'isTestCert' => $isTestCert,
-            'user' => $user,
-        ]);
+        return view('Certificate.index', compact('certData', 'isTestCert', 'certExists', 'user'));
     }
+
 
     public function generateCertificate(Request $request)
     {
