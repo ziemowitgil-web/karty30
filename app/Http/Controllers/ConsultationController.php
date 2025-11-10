@@ -124,6 +124,7 @@ class ConsultationController extends Controller
     // =========================================================
     // ===================== PODPIS ===========================
     // =========================================================
+
     public function sign(Consultation $consultation, $jsonMode = false)
     {
         if ($consultation->status !== 'draft') {
@@ -136,19 +137,45 @@ class ConsultationController extends Controller
 
             $testCertFlag = false;
 
-            // Weryfikacja certyfikatu użytkownika po e-mailu
-            if (!$this->verifyCertificateByEmail(Auth::user(), $testCertFlag)) {
-                $msg = "Certyfikat użytkownika jest nieprawidłowy lub niezgodny z adresem e-mail w systemie.";
-                activity()->causedBy(Auth::user())->performedOn($consultation)->log("Weryfikacja certyfikatu NIE POWIODŁA: {$msg}");
+            // Weryfikacja certyfikatu użytkownika
+            $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
+            if (!file_exists($certPath)) {
+                $msg = "Brak certyfikatu użytkownika. Nie można podpisać konsultacji.";
+                activity()->causedBy(Auth::user())->performedOn($consultation)->log($msg);
+                return $jsonMode ? $msg : redirect()->back()->with('error', $msg);
+            }
+
+            $certContent = file_get_contents($certPath);
+            $cert = openssl_x509_read($certContent);
+            if (!$cert) {
+                $msg = "Nieprawidłowy certyfikat użytkownika.";
+                activity()->causedBy(Auth::user())->performedOn($consultation)->log($msg);
+                return $jsonMode ? $msg : redirect()->back()->with('error', $msg);
+            }
+
+            $certData = openssl_x509_parse($cert);
+            $now = time();
+            if (!$certData || $now < $certData['validFrom_time_t'] || $now > $certData['validTo_time_t']) {
+                $msg = "Certyfikat użytkownika jest nieważny czasowo.";
+                activity()->causedBy(Auth::user())->performedOn($consultation)->log($msg);
+                return $jsonMode ? $msg : redirect()->back()->with('error', $msg);
+            }
+
+            if (strtolower($certData['subject']['emailAddress'] ?? '') !== strtolower(Auth::user()->email)) {
+                $msg = "Adres e-mail w certyfikacie nie zgadza się z użytkownikiem systemu.";
+                activity()->causedBy(Auth::user())->performedOn($consultation)->log($msg);
                 return $jsonMode ? $msg : redirect()->back()->with('error', $msg);
             }
 
             activity()->causedBy(Auth::user())->performedOn($consultation)->log("Weryfikacja certyfikatu użytkownika POWIODŁA");
 
-            // Dodatkowy krok w przypadku generowania certyfikatu testowego
-            if ($testCertFlag) {
-                activity()->causedBy(Auth::user())->performedOn($consultation)
-                    ->log("Wygenerowano certyfikat testowy dla środowiska staging");
+            // Dodatkowy krok w przypadku środowiska testowego
+            if (app()->environment('staging')) {
+                $testCertFlag = (time() - filemtime($certPath)) <= 6 * 3600;
+                if ($testCertFlag) {
+                    activity()->causedBy(Auth::user())->performedOn($consultation)
+                        ->log("Wygenerowano certyfikat testowy dla środowiska staging");
+                }
             }
 
             $steps = [
@@ -164,6 +191,7 @@ class ConsultationController extends Controller
                 activity()->causedBy(Auth::user())->performedOn($consultation)->log($step);
             }
 
+            // Tworzenie katalogu na podpisane dokumenty
             $dir = app_path('signed_docs');
             if (!file_exists($dir)) mkdir($dir, 0777, true);
 
@@ -173,15 +201,11 @@ class ConsultationController extends Controller
             $fileName = "consultation_{$consultation->id}_{$clientId}_{$dateStr}_{$randomStr}.xml";
             $filePath = $dir . DIRECTORY_SEPARATOR . $fileName;
 
-            // Odczyt certyfikatu użytkownika
-            $certPath = storage_path("certs/".Auth::user()->id."_user_cert.pem");
-            $certContent = file_get_contents($certPath);
-            $cert = openssl_x509_read($certContent);
-            $certData = openssl_x509_parse($cert);
-
+            // Dane certyfikatu do XML
             $certCN = $certData['subject']['CN'] ?? '';
             $certEmail = $certData['subject']['emailAddress'] ?? '';
             $certOrg = $certData['subject']['O'] ?? '';
+            $certOU = $certData['subject']['OU'] ?? '';
             $validFrom = isset($certData['validFrom_time_t']) ? date('c', $certData['validFrom_time_t']) : '';
             $validTo = isset($certData['validTo_time_t']) ? date('c', $certData['validTo_time_t']) : '';
             $certSha1 = sha1($certContent);
@@ -195,11 +219,11 @@ class ConsultationController extends Controller
             $xmlContent .= "  <datetime>{$consultation->consultation_datetime}</datetime>\n";
             $xmlContent .= "  <duration>{$consultation->duration_minutes}</duration>\n";
             $xmlContent .= "  <description>" . htmlspecialchars($consultation->description) . "</description>\n";
-
             $xmlContent .= "  <certificate>\n";
             $xmlContent .= "    <common_name>" . htmlspecialchars($certCN) . "</common_name>\n";
             $xmlContent .= "    <email>" . htmlspecialchars($certEmail) . "</email>\n";
             $xmlContent .= "    <organization>" . htmlspecialchars($certOrg) . "</organization>\n";
+            $xmlContent .= "    <organizational_unit>" . htmlspecialchars($certOU) . "</organizational_unit>\n";
             $xmlContent .= "    <valid_from>{$validFrom}</valid_from>\n";
             $xmlContent .= "    <valid_to>{$validTo}</valid_to>\n";
             $xmlContent .= "    <sha1>{$certSha1}</sha1>\n";
@@ -219,7 +243,7 @@ class ConsultationController extends Controller
             $consultation->update([
                 'sha1sum' => $sha1,
                 'status' => 'completed',
-                'approved_by_name' => Auth::user()->name
+                'approved_by_name' => Auth::user()->name,
             ]);
 
             activity()->causedBy(Auth::user())->performedOn($consultation)->log("Konsultacja podpisana (SHA1: {$sha1})");
@@ -264,15 +288,31 @@ class ConsultationController extends Controller
         ]);
     }
 
-    // =========================================================
-    // ===================== PDF / XML ========================
-    // =========================================================
     public function downloadPdf(Consultation $consultation)
     {
         if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
 
         $mpdf = new Mpdf();
-        $html = view('Consultation.pdf', compact('consultation'))->render();
+
+        // Odczyt certyfikatu użytkownika
+        $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
+        $certData = null;
+
+        if(file_exists($certPath)){
+            $cert = openssl_x509_read(file_get_contents($certPath));
+            $parsed = openssl_x509_parse($cert);
+            $certData = [
+                'CN' => $parsed['subject']['CN'] ?? '',
+                'email' => $parsed['subject']['emailAddress'] ?? '',
+                'O' => $parsed['subject']['O'] ?? '',
+                'OU' => $parsed['subject']['OU'] ?? '',
+                'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : '',
+                'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : '',
+                'sha1' => sha1(file_get_contents($certPath)),
+            ];
+        }
+
+        $html = view('Consultation.pdf', compact('consultation', 'certData'))->render();
         $mpdf->WriteHTML($html);
 
         return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
@@ -280,38 +320,27 @@ class ConsultationController extends Controller
 
     public function xml(Consultation $consultation)
     {
-        $xmlContent = $consultation->toXml();
+        $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
+        $certData = null;
+
+        if(file_exists($certPath)){
+            $cert = openssl_x509_read(file_get_contents($certPath));
+            $parsed = openssl_x509_parse($cert);
+            $certData = [
+                'CN' => $parsed['subject']['CN'] ?? '',
+                'email' => $parsed['subject']['emailAddress'] ?? '',
+                'O' => $parsed['subject']['O'] ?? '',
+                'OU' => $parsed['subject']['OU'] ?? '',
+                'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : '',
+                'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : '',
+                'sha1' => sha1(file_get_contents($certPath)),
+            ];
+        }
+
+        $xmlContent = $consultation->toXml($certData);
         return response($xmlContent, 200)->header('Content-Type', 'application/xml');
     }
 
-    // =========================================================
-    // ===================== STAGING TEST =====================
-    // =========================================================
-    public function deleteTestData(Request $request)
-    {
-        if(!app()->environment('staging')){
-            abort(403, 'Brak dostępu.');
-        }
-
-        $dir = app_path('signed_docs');
-        $filesDeleted = 0;
-
-        if(file_exists($dir)){
-            foreach(glob($dir . '/*') as $file){
-                if(is_file($file)){
-                    unlink($file);
-                    $filesDeleted++;
-                }
-            }
-        }
-
-        return response()->json(['message' => "Usunięto $filesDeleted plików testowych."]);
-    }
-
-    public function details(Consultation $consultation)
-    {
-        return view('Consultation.details', compact('consultation'));
-    }
 
     // =========================================================
     // ===================== CERTYFIKAT =======================
