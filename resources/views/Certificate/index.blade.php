@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto p-6 max-w-5xl">
+    <div class="container mx-auto p-6 max-w-4xl">
 
         <h1 class="text-3xl font-bold mb-6 text-gray-900">Certyfikat użytkownika</h1>
 
@@ -9,49 +9,48 @@
         <div id="alert-container" aria-live="polite" class="mb-4"></div>
 
         @if($certExists && $certData)
-            <div class="bg-white rounded shadow flex flex-col md:flex-row gap-6 p-6" role="region" aria-label="Dane certyfikatu">
+            <div class="bg-white rounded shadow p-6">
 
-                {{-- Lewa kolumna: dane certyfikatu --}}
-                <div class="flex-1">
-                    <h2 class="text-2xl font-semibold mb-4">Dane certyfikatu</h2>
-                    <table class="w-full table-auto border-collapse">
-                        <tr>
-                            <td class="font-medium py-2 px-4 border-b">Imię i nazwisko</td>
-                            <td class="py-2 px-4 border-b">{{ $certData['common_name'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="font-medium py-2 px-4 border-b">Email</td>
-                            <td class="py-2 px-4 border-b">{{ $certData['email'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="font-medium py-2 px-4 border-b">Organizacja</td>
-                            <td class="py-2 px-4 border-b">{{ $certData['organization'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="font-medium py-2 px-4 border-b">Jednostka organizacyjna</td>
-                            <td class="py-2 px-4 border-b">{{ $certData['organizational_unit'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="font-medium py-2 px-4 border-b">Ważny od</td>
-                            <td class="py-2 px-4 border-b">{{ $certData['valid_from'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="font-medium py-2 px-4 border-b">Ważny do</td>
-                            <td class="py-2 px-4 border-b">{{ $certData['valid_to'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="font-medium py-2 px-4 border-b">SHA1</td>
-                            <td class="py-2 px-4 border-b font-mono break-all">{{ $certData['sha1'] }}</td>
-                        </tr>
-                    </table>
+                <h2 class="text-2xl font-semibold mb-4">Dane certyfikatu</h2>
+                <table class="w-full table-auto border-collapse mb-6">
+                    <tbody>
+                    <tr>
+                        <td class="font-medium py-2 px-4 border-b">Imię i nazwisko</td>
+                        <td class="py-2 px-4 border-b">{{ $certData['common_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-medium py-2 px-4 border-b">Email</td>
+                        <td class="py-2 px-4 border-b">{{ $certData['email'] }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-medium py-2 px-4 border-b">Organizacja</td>
+                        <td class="py-2 px-4 border-b">{{ $certData['organization'] }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-medium py-2 px-4 border-b">Jednostka organizacyjna</td>
+                        <td class="py-2 px-4 border-b">{{ $certData['organizational_unit'] }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-medium py-2 px-4 border-b">Ważny od</td>
+                        <td class="py-2 px-4 border-b">{{ $certData['valid_from'] }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-medium py-2 px-4 border-b">Ważny do</td>
+                        <td class="py-2 px-4 border-b">{{ $certData['valid_to'] }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-medium py-2 px-4 border-b">SHA1</td>
+                        <td class="py-2 px-4 border-b font-mono break-all">{{ $certData['sha1'] }}</td>
+                    </tr>
+                    </tbody>
+                </table>
 
-                    @if($isTestCert)
-                        <p class="text-yellow-600 mt-4">To jest certyfikat testowy (staging).</p>
-                    @endif
-                </div>
+                @if($isTestCert)
+                    <p class="text-yellow-600 mb-4">To jest certyfikat testowy (staging).</p>
+                @endif
 
-                {{-- Prawa kolumna: akcje --}}
-                <div class="flex flex-col gap-3 md:w-64">
+                {{-- Akcje --}}
+                <div class="flex flex-col md:flex-row gap-3">
                     <button id="download-cert" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:ring-2 focus:ring-green-300 focus:outline-none" aria-label="Pobierz certyfikat">
                         Pobierz certyfikat
                     </button>
@@ -62,7 +61,7 @@
 
             </div>
         @else
-            {{-- Formularz generowania certyfikatu z hasłem --}}
+            {{-- Formularz generowania certyfikatu --}}
             <div class="bg-yellow-100 p-4 rounded shadow mb-4">
                 Brak certyfikatu. Możesz wygenerować nowy certyfikat.
             </div>
@@ -75,9 +74,8 @@
             </div>
         @endif
 
-        {{-- Informacja o certyfikatach systemowych / API --}}
         <p class="mt-6 text-gray-600 text-sm">
-            Certyfikat systemowy oraz certyfikat do komunikacji API są ważne, jednak dane są widoczne wyłącznie dla administratora (root).
+            Certyfikat systemowy i certyfikat API są ważne, ale dane są widoczne tylko dla administratora.
         </p>
 
     </div>
