@@ -24,34 +24,7 @@
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 flex flex-col min-h-screen">
 
-@php
-    $user = Auth::user();
-    if(!$user) {
-        // jeśli niezalogowany -> przekierowanie
-        header('Location: ' . route('login'));
-        exit;
-    }
 
-    $certCN = 'Brak certyfikatu';
-    $certOrg = null;
-    $certValidUntil = null;
-
-    $certDir = storage_path('app/certificates');
-    $certFile = $certDir . '/' . $user->id . '_user_cert.pem';
-
-    if(file_exists($certFile)) {
-        $certContent = file_get_contents($certFile);
-        $certRes = @openssl_x509_read($certContent);
-        if($certRes) {
-            $certData = @openssl_x509_parse($certRes);
-            $certCN = $certData['subject']['CN'] ?? 'Nieznany';
-            $certOrg = $certData['subject']['O'] ?? null;
-            if(isset($certData['validTo_time_t'])) {
-                $certValidUntil = date('d.m.Y', $certData['validTo_time_t']);
-            }
-        }
-    }
-@endphp
 
     <!-- HEADER -->
 <header class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
