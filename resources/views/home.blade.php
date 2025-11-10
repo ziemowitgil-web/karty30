@@ -235,5 +235,4 @@
         });
         @endif
     </script>
-<!-- Koniec pliku -->
-    
+@endsection
