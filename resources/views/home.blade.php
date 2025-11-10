@@ -96,7 +96,7 @@
                             Mimo że certyfikaty wydaje Ziemowit Gil, możesz go samodzielnie wygenerować w zakładce
                             <a href="{{ route('consultations.certificate.view') }}" class="text-blue-600 hover:underline">Zarządzaj certyfikatem</a>.
                         </p>
-                        
+
                         <div class="text-sm text-gray-700 mt-3 leading-snug">
                             <p><strong>W przypadku problemów:</strong></p>
                             <p>Ziemowit Gil — <a href="mailto:ziemowit.gil@feer.org.pl" class="text-blue-600 hover:underline">ziemowit.gil@feer.org.pl</a></p>

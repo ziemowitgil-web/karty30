@@ -26,6 +26,13 @@ class UsersTableSeeder extends Seeder
                 'password' => Hash::make('D3vAdm!n2025'),
                 'role' => 'admin', // opcjonalnie
             ],
+
+            [
+                'name' => 'Ziemowit  testy ',
+                'email' => 'ziemowit@testy.feer.org.pl',
+                'password' => Hash::make('zaq1@WSX'),
+                'role' => 'admin', // opcjonalnie
+            ],
         ];
 
         foreach ($users as $user) {
