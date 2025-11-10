@@ -9,16 +9,6 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Cookie Consent -->
-    {!! CookieConsent::styles() !!}
-
-    <script>
-        function toggleMenu() {
-            const menu = document.getElementById('mobile-menu');
-            menu.classList.toggle('hidden');
-        }
-    </script>
-
     <style>
         a:focus, button:focus {
             outline: 2px dashed #fff;
@@ -35,18 +25,30 @@
 <body class="bg-gray-100 font-sans text-gray-900 flex flex-col min-h-screen">
 
 @php
-    $accessible = request()->query('accessibility') == 1 || session('accessible_view') == true;
+    $user = Auth::user();
+    if(!$user) {
+        // jeśli niezalogowany -> przekierowanie
+        header('Location: ' . route('login'));
+        exit;
+    }
 
-    // Certyfikat użytkownika - CN
-    $certDir = storage_path('app/certificates');
-    $certFile = $certDir . '/' . Auth::user()->id . '_user_cert.pem';
     $certCN = 'Brak certyfikatu';
+    $certOrg = null;
+    $certValidUntil = null;
+
+    $certDir = storage_path('app/certificates');
+    $certFile = $certDir . '/' . $user->id . '_user_cert.pem';
+
     if(file_exists($certFile)) {
         $certContent = file_get_contents($certFile);
-        $certRes = openssl_x509_read($certContent);
+        $certRes = @openssl_x509_read($certContent);
         if($certRes) {
-            $certData = openssl_x509_parse($certRes);
-            $certCN = $certData['subject']['CN'] ?? 'Brak CN';
+            $certData = @openssl_x509_parse($certRes);
+            $certCN = $certData['subject']['CN'] ?? 'Nieznany';
+            $certOrg = $certData['subject']['O'] ?? null;
+            if(isset($certData['validTo_time_t'])) {
+                $certValidUntil = date('d.m.Y', $certData['validTo_time_t']);
+            }
         }
     }
 @endphp
@@ -54,51 +56,26 @@
     <!-- HEADER -->
 <header class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
     <div class="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
-
-        <!-- Logo / nazwa aplikacji -->
         <a href="{{ route('home') }}" class="text-2xl font-bold hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white" aria-label="Strona główna">
             {{ config('app.name', 'Karty 3.0') }}
         </a>
 
-        <!-- Desktop menu -->
         <nav class="hidden md:flex items-center space-x-4" role="navigation" aria-label="Główne menu">
-            @auth
-                <!-- Szybkie akcje -->
-                <a href="{{ route('schedules.create') }}" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Rezerwacja</a>
-                <a href="{{ route('clients.create') }}" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Klient</a>
+            <a href="{{ route('home') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
+            <a href="{{ route('schedules.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
+            <a href="{{ route('consultations.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
 
-                <!-- Nawigacja główna -->
-                <a href="{{ route('home') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
-                <a href="{{ route('schedules.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
-                <a href="{{ route('consultations.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
+            <div class="px-3 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
+                Certyfikat: {{ $certCN }}
+            </div>
 
-                @unless($accessible)
-                    <a href="{{ route('clients.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Klienci</a>
-                    <a href="{{ route('raport') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Raporty</a>
-                @endunless
-
-                @if(auth()->user()->is_admin ?? true)
-                    <a href="{{ route('logs') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
-                @endif
-
-                <!-- Informacja o CN certyfikatu -->
-                <div class="px-3 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
-                    Certyfikat: {{ $certCN }}
-                </div>
-
-                <!-- Wylogowanie -->
-                <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
-                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
-            @endauth
-
-            @guest
-                <a href="{{ route('login') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logowanie</a>
-            @endguest
+            <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
         </nav>
 
-        <!-- Mobile hamburger -->
+        <!-- Mobile menu -->
         <div class="md:hidden flex items-center">
-            <button onclick="toggleMenu()" class="focus:outline-none" aria-label="Otwórz menu mobilne">
+            <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="focus:outline-none" aria-label="Otwórz menu mobilne">
                 <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
@@ -106,39 +83,17 @@
         </div>
     </div>
 
-    <!-- Mobile menu -->
     <div id="mobile-menu" class="md:hidden hidden bg-gray-800 px-4 py-4 space-y-2" role="menu">
-        @auth
-            <a href="{{ route('schedules.create') }}" class="block px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-white">+ Rezerwacja</a>
-            <a href="{{ route('clients.create') }}" class="block px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-white">+ Klient</a>
+        <a href="{{ route('home') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
+        <a href="{{ route('schedules.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
+        <a href="{{ route('consultations.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
 
-            <div class="border-t border-gray-700 my-2"></div>
-            <a href="{{ route('home') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
-            <a href="{{ route('schedules.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
-            <a href="{{ route('consultations.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
+        <div class="block px-4 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
+            CN: {{ $certCN }}
+        </div>
 
-            @unless($accessible)
-                <a href="{{ route('clients.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Klienci</a>
-                <a href="{{ route('raport') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Raporty</a>
-            @endunless
-
-            @if(auth()->user()->is_admin ?? true)
-                <a href="{{ route('logs') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
-            @endif
-
-            <!-- Info CN certyfikatu -->
-            <div class="block px-4 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
-                CN: {{ $certCN }}
-            </div>
-
-            <div class="border-t border-gray-700 my-2"></div>
-            <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-mobile').submit();" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
-            <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
-        @endauth
-
-        @guest
-            <a href="{{ route('login') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Logowanie</a>
-        @endguest
+        <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-mobile').submit();" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
+        <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
     </div>
 </header>
 
@@ -171,6 +126,5 @@
     </div>
 </footer>
 
-{!! CookieConsent::scripts() !!}
 </body>
 </html>
