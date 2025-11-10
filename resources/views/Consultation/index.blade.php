@@ -47,12 +47,9 @@
                         <td class="px-4 py-2">{{ \Carbon\Carbon::parse($c->consultation_datetime)->format('d.m.Y H:i') }}</td>
                         <td class="px-4 py-2">{{ $c->duration_minutes }} min</td>
                         <td class="px-4 py-2 flex flex-wrap gap-2">
-                            <a href="{{ route('consultations.details', $c) }}"
-                               class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400">
-                                Szczegóły
-                            </a>
+
                             <button class="sign-button bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400"
-                                    data-id="{{ $c->id }}" aria-label="Podpisz konsultację {{ $c->id }}">
+                                    data-id="{{ $c->id }}" aria-label="Podpisz  {{ $c->id }}">
                                 Podpisz
                             </button>
                             <button class="history-button bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400"
