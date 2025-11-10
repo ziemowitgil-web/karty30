@@ -165,8 +165,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/delete-test-data', [ConsultationController::class, 'deleteTestData'])->name('deleteTestData');
 
         // Certyfikat
-        Route::get('/certificate', [ConsultationController::class, 'certificateDetailsView'])->name('certificate.view');
         Route::get('/certificate/json', [ConsultationController::class, 'certificateDetails'])->name('certificate.json');
+        Route::get('/certificate', [ConsultationController::class, 'certificateView'])->name('certificate.view');
 
 
     });

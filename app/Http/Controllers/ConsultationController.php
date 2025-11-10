@@ -437,26 +437,37 @@ class ConsultationController extends Controller
 
         if (file_exists($certPath)) {
             $certContent = file_get_contents($certPath);
-            $cert = openssl_x509_read($certContent);
-            if ($cert) {
-                $parsed = openssl_x509_parse($cert);
-                if ($parsed) {
+
+            // Spróbuj wczytać certyfikat
+            $certResource = @openssl_x509_read($certContent);
+
+            if ($certResource !== false) {
+                $parsed = @openssl_x509_parse($certResource);
+
+                if ($parsed !== false) {
                     $certData = [
                         'common_name' => $parsed['subject']['CN'] ?? null,
                         'email' => $parsed['subject']['emailAddress'] ?? null,
                         'organization' => $parsed['subject']['O'] ?? null,
                         'organizational_unit' => $parsed['subject']['OU'] ?? null,
-                        'valid_from' => isset($parsed['validFrom_time_t']) ? date('c', $parsed['validFrom_time_t']) : null,
-                        'valid_to' => isset($parsed['validTo_time_t']) ? date('c', $parsed['validTo_time_t']) : null,
+                        'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : null,
+                        'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : null,
                         'sha1' => sha1($certContent),
                     ];
-                    $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) < 6 * 3600);
+
+                    // Sprawdzenie certyfikatu testowego: staging + ważność < 6h
+                    $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) <= 6 * 3600);
                 }
             }
         }
 
-        return view('Certificate.index', compact('certData', 'isTestCert'));
+        return view('Certificate.index', [
+            'certData' => $certData,
+            'isTestCert' => $isTestCert,
+            'user' => $user,
+        ]);
     }
+
 
 
 }
