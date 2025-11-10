@@ -43,72 +43,49 @@
     <div class="container mx-auto px-6 py-3 flex items-center justify-between">
 
         <!-- Logo / Title -->
-        <span class="text-xl font-bold">{{ config('app.name', 'Laravel') }}</span>
+        <a href="{{ route('home') }}" class="text-xl font-bold hover:text-gray-300"> {{ config('app.name', 'Laravel') }} </a>
 
-        <!-- Desktop menu -->
-        <nav class="hidden md:flex items-center space-x-2" role="navigation" aria-label="Główne menu">
+        <!-- Desktop Menu -->
+        <nav class="hidden md:flex items-center space-x-3" role="navigation" aria-label="Główne menu">
             @auth
-                <!-- Najważniejsze akcje na początku -->
-                <a href="{{ route('schedules.create') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white" aria-label="Dodaj szybką rezerwację">+ Rezerwacja</a>
-                <a href="{{ route('clients.create') }}" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white" aria-label="Dodaj nowego klienta">+ Klient</a>
+                <!-- Akcje szybkie -->
+                <a href="{{ route('schedules.create') }}" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Rezerwacja</a>
+                <a href="{{ route('clients.create') }}" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Klient</a>
 
-                <div class="border-l border-gray-600 h-6 mx-2"></div>
-
-                <!-- Standardowe linki -->
-                <a href="{{ route('home') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" aria-current="{{ request()->routeIs('home') ? 'page' : '' }}">Strona główna</a>
-                <a href="{{ route('schedules.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" aria-current="{{ request()->routeIs('schedules.*') ? 'page' : '' }}">Rezerwacje</a>
-                <a href="{{ route('consultations.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" aria-current="{{ request()->routeIs('consultations.*') ? 'page' : '' }}">Konsultacje</a>
+                <!-- Nawigacja główna -->
+                <a href="{{ route('home') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
+                <a href="{{ route('schedules.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
+                <a href="{{ route('consultations.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
 
                 @unless($accessible)
-                    <div class="border-l border-gray-600 h-6 mx-2"></div>
-                    <a href="{{ route('clients.index') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" aria-current="{{ request()->routeIs('clients.*') ? 'page' : '' }}">Klienci</a>
-
-                    <!-- Raporty -->
-                    <div class="relative group">
-                        <button class="px-4 py-2 rounded hover:bg-gray-700 flex items-center space-x-1 transition focus:outline-none focus:ring-2 focus:ring-white" aria-haspopup="true" aria-expanded="false">
-                            Raporty
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                        <div class="absolute left-0 mt-1 w-64 bg-gray-800 rounded shadow-lg hidden group-hover:block z-50" role="menu" aria-label="Raporty">
-                            <a href="{{ route('raport') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Podsumowanie</a>
-                            <a href="{{ route('raports.cancelled') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Odwołane rezerwacje</a>
-                            <a href="{{ route('raports.blacklist') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Czarna lista</a>
-                            <a href="{{ route('raports.approvedThisMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Konsultacje zatwierdzone w tym miesiącu</a>
-                            <a href="{{ route('raports.approvedLastMonth') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Konsultacje zatwierdzone w poprzednim miesiącu</a>
-                            <a href="{{ route('raports.monthlyReportMRPIPS') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Raport MRPiPS</a>
-                            <a href="{{ route('raports.monthlyReportMRPIPS.email') }}" class="block px-4 py-2 text-white hover:bg-gray-700 transition" role="menuitem">Wyślij raport MRPiPS</a>
-                        </div>
-                    </div>
+                    <a href="{{ route('clients.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Klienci</a>
+                    <a href="{{ route('raport') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Raporty</a>
                 @endunless
 
                 @if(auth()->user()->is_admin ?? true)
-                    <div class="border-l border-gray-600 h-6 mx-2"></div>
-                    <a href="{{ route('logs') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
+                    <a href="{{ route('logs') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
                 @endif
 
-                <div class="border-l border-gray-600 h-6 mx-2"></div>
-                <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
+                <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
             @endauth
 
             @guest
-                <a href="{{ route('login') }}" class="px-4 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logowanie</a>
+                <a href="{{ route('login') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logowanie</a>
             @endguest
         </nav>
 
-        <!-- Hamburger mobile -->
+        <!-- Mobile Hamburger -->
         <div class="md:hidden flex items-center">
             <button onclick="toggleMenu()" class="focus:outline-none" aria-label="Otwórz menu mobilne">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
         </div>
     </div>
 
-    <!-- Mobile menu -->
+    <!-- Mobile Menu -->
     <div id="mobile-menu" class="md:hidden hidden bg-gray-800 px-4 py-4 space-y-2" role="menu">
         @auth
             <a href="{{ route('schedules.create') }}" class="block px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">+ Rezerwacja</a>
@@ -120,27 +97,11 @@
             <a href="{{ route('consultations.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Konsultacje</a>
 
             @unless($accessible)
-                <div class="border-t border-gray-700 my-2"></div>
                 <a href="{{ route('clients.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Klienci</a>
-                <button onclick="toggleMobileSubmenu('mobile-raporty')" class="w-full text-left px-4 py-2 rounded hover:bg-gray-700 flex justify-between items-center" aria-expanded="false">
-                    Raporty
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                    </svg>
-                </button>
-                <div id="mobile-raporty" class="hidden pl-4" role="menu">
-                    <a href="{{ route('raport') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Podsumowanie</a>
-                    <a href="{{ route('raports.cancelled') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Odwołane rezerwacje</a>
-                    <a href="{{ route('raports.blacklist') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Czarna lista</a>
-                    <a href="{{ route('raports.approvedThisMonth') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Konsultacje zatwierdzone w tym miesiącu</a>
-                    <a href="{{ route('raports.approvedLastMonth') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Konsultacje zatwierdzone w poprzednim miesiącu</a>
-                    <a href="{{ route('raports.monthlyReportMRPIPS') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Raport MRPiPS</a>
-                    <a href="{{ route('raports.monthlyReportMRPIPS.email') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Wyślij raport MRPiPS</a>
-                </div>
+                <a href="{{ route('raport') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Raporty</a>
             @endunless
 
             @if(auth()->user()->is_admin ?? true)
-                <div class="border-t border-gray-700 my-2"></div>
                 <a href="{{ route('logs') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Logi</a>
             @endif
 
@@ -154,6 +115,7 @@
         @endguest
     </div>
 </header>
+
 
 <!-- Main content -->
 <main class="flex-grow container mx-auto px-6 py-6">
