@@ -52,7 +52,7 @@
 
             @if($certExists)
                 <div class="text-gray-700 leading-relaxed space-y-1">
-                    <p><span class="font-medium text-gray-900">CN:</span> {{ $certCN }}</p>
+                    <p><span class="font-medium text-gray-900">Posiadacz (CN):</span> {{ $certCN }}</p>
                     <p><span class="font-medium text-gray-900">Organizacja:</span> {{ $certOrg }}</p>
                     <p><span class="font-medium text-gray-900">Ważny do:</span> {{ $certValidUntil }}</p>
 
