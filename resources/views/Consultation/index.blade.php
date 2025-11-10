@@ -209,14 +209,14 @@
 
                                         if (data.success) {
                                             document.getElementById('shaDisplay').textContent = data.sha1;
-                                            finalMessage.textContent = ' Podpis zakończony sukcesem. Dziękujemy!';
+                                            finalMessage.textContent = '✅ Podpis zakończony sukcesem. Dziękujemy!';
                                         } else {
-                                            finalMessage.textContent = ' Wystąpił błąd podczas podpisu: ' + (data.error || 'Nieznany błąd.');
+                                            finalMessage.textContent = '❌ Wystąpił błąd podczas podpisu: ' + (data.error || 'Nieznany błąd.');
                                         }
                                     })
                                     .catch(err => {
                                         autoReturnMessage.classList.remove('hidden');
-                                        finalMessage.textContent = '️ Błąd komunikacji z serwerem: ' + err.message;
+                                        finalMessage.textContent = '⚠️ Błąd komunikacji z serwerem: ' + err.message;
                                         let countdown = 10;
                                         const interval = setInterval(() => {
                                             countdown--;
@@ -233,4 +233,33 @@
                     });
                 });
 
-                document.getElementById('closeSignModal').addEven
+                document.getElementById('closeSignModal').addEventListener('click', () => {
+                    document.getElementById('signModal').classList.add('hidden');
+                });
+
+                // Historia
+                document.querySelectorAll('.history-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const consultationId = this.dataset.id;
+                        const modal = document.getElementById('historyModal');
+                        const list = document.getElementById('historyList');
+                        list.innerHTML = '';
+                        modal.classList.remove('hidden');
+
+                        fetch(`/consultations/${consultationId}/history-json`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.logs.length === 0) list.innerHTML = '<li>Brak historii</li>';
+                                else data.logs.forEach(log => list.innerHTML += `<li>${log.created_at}: ${log.description}</li>`);
+                            })
+                            .catch(err => list.innerHTML = `<li>Błąd ładowania historii: ${err}</li>`);
+                    });
+                });
+
+                document.getElementById('closeHistoryModal').addEventListener('click', () => {
+                    document.getElementById('historyModal').classList.add('hidden');
+                });
+            });
+        </script>
+    </div>
+@endsection
