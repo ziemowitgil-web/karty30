@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container py-4">
-        <h1 id="certificate-title" class="mb-4">Certyfikat użytkownika</h1>
+    <div class="container mx-auto py-4">
+        <h1 id="certificate-title" class="text-2xl font-semibold mb-4">Certyfikat użytkownika</h1>
 
         <div id="alert-container" aria-live="polite"></div>
 
@@ -12,37 +12,44 @@
                     <div class="card-header bg-primary text-white">
                         <h2 class="h5 mb-0">Dane certyfikatu</h2>
                     </div>
-                    <div class="card-body">
-                        <dl class="row mb-0">
-                            <dt class="col-sm-4">Imię i nazwisko:</dt>
-                            <dd class="col-sm-8">{{ $certData['common_name'] }}</dd>
-
-                            <dt class="col-sm-4">Email:</dt>
-                            <dd class="col-sm-8">{{ $certData['email'] }}</dd>
-
-                            <dt class="col-sm-4">Organizacja:</dt>
-                            <dd class="col-sm-8">{{ $certData['organization'] }}</dd>
-
-                            <dt class="col-sm-4">Jednostka organizacyjna:</dt>
-                            <dd class="col-sm-8">{{ $certData['organizational_unit'] }}</dd>
-
-                            <dt class="col-sm-4">Ważny od:</dt>
-                            <dd class="col-sm-8">{{ $certData['valid_from'] }}</dd>
-
-                            <dt class="col-sm-4">Ważny do:</dt>
-                            <dd class="col-sm-8">{{ $certData['valid_to'] }}</dd>
-
-                            <dt class="col-sm-4">SHA1:</dt>
-                            <dd class="col-sm-8 text-monospace">{{ $certData['sha1'] }}</dd>
-                        </dl>
-
+                    <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+                        <div class="flex justify-between">
+                            <span class="font-medium">Imię i nazwisko:</span>
+                            <span>{{ $certData['common_name'] }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium">Email:</span>
+                            <span>{{ $certData['email'] }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium">Organizacja:</span>
+                            <span>{{ $certData['organization'] }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium">Jednostka organizacyjna:</span>
+                            <span>{{ $certData['organizational_unit'] }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium">Ważny od:</span>
+                            <span>{{ $certData['valid_from'] }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium">Ważny do:</span>
+                            <span>{{ $certData['valid_to'] }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium">SHA1:</span>
+                            <span class="font-mono">{{ $certData['sha1'] }}</span>
+                        </div>
                         @if($isTestCert)
-                            <div class="alert alert-warning mt-3" role="alert">
-                                To jest certyfikat testowy (staging).
+                            <div class="col-span-full">
+                                <div class="alert alert-warning mt-3" role="alert">
+                                    To jest certyfikat testowy (staging).
+                                </div>
                             </div>
                         @endif
                     </div>
-                    <div class="card-footer d-flex gap-2 justify-content-start">
+                    <div class="card-footer flex gap-2 justify-start p-4">
                         <button id="download-cert" class="btn btn-success" aria-label="Pobierz certyfikat">
                             <i class="bi bi-download"></i> Pobierz certyfikat
                         </button>
