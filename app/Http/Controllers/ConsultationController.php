@@ -461,19 +461,124 @@ class ConsultationController extends Controller
     }
 
 
-    public function generateCertificate()
+    /**
+     * Pobranie danych certyfikatu (JSON)
+     */
+    public function certificateDetails(Request $request)
     {
-        $user = auth()->user();
-        $certPath = storage_path("app/certificates/{$user->id}.crt");
-        $keyPath  = storage_path("app/certificates/{$user->id}.key");
+        $user = Auth::user();
+        $certPath = storage_path("app/certificates/{$user->id}_user_cert.pem");
 
-        // Ustawienia certyfikatu
+        if (!file_exists($certPath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Brak certyfikatu dla użytkownika.'
+            ], 404);
+        }
+
+        $certContent = file_get_contents($certPath);
+        $cert = openssl_x509_read($certContent);
+
+        if (!$cert) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nie udało się odczytać certyfikatu.'
+            ], 500);
+        }
+
+        $certData = openssl_x509_parse($cert);
+
+        if (!$certData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nie udało się sparsować certyfikatu.'
+            ], 500);
+        }
+
+        $details = [
+            'common_name' => $certData['subject']['CN'] ?? null,
+            'email' => $certData['subject']['emailAddress'] ?? null,
+            'organization' => $certData['subject']['O'] ?? null,
+            'organizational_unit' => $certData['subject']['OU'] ?? null,
+            'valid_from' => isset($certData['validFrom_time_t']) ? date('c', $certData['validFrom_time_t']) : null,
+            'valid_to' => isset($certData['validTo_time_t']) ? date('c', $certData['validTo_time_t']) : null,
+            'sha1' => sha1($certContent),
+            'is_test_certificate' => app()->environment('staging') && filemtime($certPath) && (time() - filemtime($certPath) < 6 * 3600)
+        ];
+
+        return response()->json([
+            'success' => true,
+            'certificate' => $details
+        ]);
+    }
+
+    /**
+     * Widok certyfikatu
+     */
+    public function certificateDetailsView()
+    {
+        $user = Auth::user();
+        $certPath = storage_path("app/certificates/{$user->id}_user_cert.pem");
+
+        $certData = null;
+        $isTestCert = false;
+        $certExists = false;
+
+        if (file_exists($certPath)) {
+            $certContent = file_get_contents($certPath);
+            $certResource = @openssl_x509_read($certContent);
+            if ($certResource !== false) {
+                $parsed = @openssl_x509_parse($certResource);
+                if ($parsed !== false) {
+                    $certData = [
+                        'common_name' => $parsed['subject']['CN'] ?? null,
+                        'email' => $parsed['subject']['emailAddress'] ?? null,
+                        'organization' => $parsed['subject']['O'] ?? null,
+                        'organizational_unit' => $parsed['subject']['OU'] ?? null,
+                        'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : null,
+                        'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : null,
+                        'sha1' => sha1($certContent),
+                    ];
+                    $certExists = true;
+                    $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) <= 6 * 3600);
+                }
+            }
+
+        return view('Certificate.index', compact('certData', 'isTestCert', 'certExists', 'user'));
+
+
+    /**
+     * Generowanie certyfikatu (self-signed) z hasłem
+     */
+    public function generateCertificate(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'string', 'min:6']
+        ]);
+
+        $user = auth()->user();
+        $password = $request->input('password');
+
+        // Tworzenie katalogu jeśli nie istnieje
+        $certDir = storage_path("app/certificates");
+        if (!file_exists($certDir)) {
+            mkdir($certDir, 0755, true);
+        }
+
+        $date = date('Ymd_His');
+        $certName = "{$user->name}_{$date}_user_cert.pem";
+        $keyName  = "{$user->name}_{$date}_user_key.pem";
+
+        $certPath = $certDir . "/{$certName}";
+        $keyPath  = $certDir . "/{$keyName}";
+
+        // Dane certyfikatu
         $dn = [
             "countryName" => "PL",
             "stateOrProvinceName" => "Małopolskie",
             "localityName" => "Nowy Sącz",
             "organizationName" => "FEER",
-            "organizationalUnitName" => "Certyfikaty podpisu niekwalfikowanego dokumentacji",
+            "organizationalUnitName" => "Certyfikaty podpisu niekwalifikowanego dokumentacji",
             "commonName" => $user->name,
             "emailAddress" => $user->email
         ];
@@ -484,26 +589,33 @@ class ConsultationController extends Controller
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
         ]);
 
-        // Tworzenie certyfikatu self-signed
         $csr = openssl_csr_new($dn, $privkey);
-        $cert = openssl_csr_sign($csr, null, $privkey, 365); // ważny 365 dni
+        $cert = openssl_csr_sign($csr, null, $privkey, 365); // 365 dni ważności
 
-        // Zapis do plików
         openssl_x509_export($cert, $certOut);
-        openssl_pkey_export($privkey, $keyOut);
+        openssl_pkey_export($privkey, $keyOut, $password); // klucz chroniony hasłem
 
         file_put_contents($certPath, $certOut);
         file_put_contents($keyPath, $keyOut);
 
-        return redirect()->route('consultations.certificate.view')
-            ->with('success', 'Certyfikat X.509 został wygenerowany.');
+        return response()->json([
+            'success' => true,
+            'message' => "Certyfikat został wygenerowany i zabezpieczony hasłem.",
+            'certFile' => $certName,
+            'keyFile' => $keyName
+        ]);
     }
+
+    /**
+     * Pobranie certyfikatu
+     */
     public function downloadCertificate()
     {
         $user = auth()->user();
-        $certPath = storage_path("app/certificates/{$user->id}.crt");
+        $certDir = storage_path("app/certificates");
+        $certPath = glob("{$certDir}/{$user->name}_*_user_cert.pem")[0] ?? null;
 
-        if (!file_exists($certPath)) {
+        if (!$certPath || !file_exists($certPath)) {
             return redirect()->route('consultations.certificate.view')
                 ->with('error', 'Brak certyfikatu do pobrania.');
         }
@@ -511,31 +623,34 @@ class ConsultationController extends Controller
         return response()->download($certPath, "{$user->name}_certificate.crt");
     }
 
+    /**
+     * Cofnięcie certyfikatu (revoke)
+     */
     public function revokeCertificate()
     {
         $user = auth()->user();
-        $certPath = storage_path("app/certificates/{$user->id}.crt");
-        $revokedPath = storage_path("app/certificates/revoked.crl");
+        $certDir = storage_path("app/certificates");
+        $certPath = glob("{$certDir}/{$user->name}_*_user_cert.pem")[0] ?? null;
+        $revokedPath = $certDir . "/revoked.crl";
 
-        if (!file_exists($certPath)) {
+        if (!$certPath || !file_exists($certPath)) {
             return redirect()->route('consultations.certificate.view')
                 ->with('error', 'Brak certyfikatu do cofnięcia.');
         }
 
-        // Wczytaj certyfikat
         $certContent = file_get_contents($certPath);
-        $cert = openssl_x509_read($certContent);
-
-        // Tutaj możesz odwołać certyfikat poprzez dodanie do CRL
-        // W praktyce self-signed CRL można trzymać w pliku
+        // Dodanie do CRL
         file_put_contents($revokedPath, $certContent, FILE_APPEND);
 
-        // Usuń certyfikat użytkownika
+        // Usunięcie certyfikatu i klucza
         unlink($certPath);
+        $keyPath = str_replace('_cert.pem', '_key.pem', $certPath);
+        if (file_exists($keyPath)) unlink($keyPath);
 
         return redirect()->route('consultations.certificate.view')
             ->with('success', 'Certyfikat został cofnięty i dodany do CRL.');
     }
+
 
 
 
