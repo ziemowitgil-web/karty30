@@ -88,7 +88,7 @@
             const generateBtn = document.getElementById('generate-cert');
             if (generateBtn) {
                 generateBtn.addEventListener('click', function () {
-                    fetch('{{ route("consultation.certificate.generate") }}', {
+                    fetch('{{ route("consultations.certificate.generate") }}', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': token,
@@ -111,7 +111,7 @@
                 revokeBtn.addEventListener('click', function () {
                     if (!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
 
-                    fetch('{{ route("consultation.certificate.revoke") }}', {
+                    fetch('{{ route("consultations.certificate.revoke") }}', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': token,
