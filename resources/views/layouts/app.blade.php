@@ -66,7 +66,7 @@
                     <a href="{{ route('logs') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
                 @endif
 
-                
+
 
                 <!-- Wylogowanie -->
                 <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
@@ -192,22 +192,6 @@
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 flex flex-col min-h-screen">
 
-@php
-    $accessible = request()->query('accessibility') == 1 || session('accessible_view') == true;
-
-    // Certyfikat użytkownika - CN
-    $certDir = storage_path('app/certificates');
-    $certFile = $certDir . '/' . Auth::user()->id . '_user_cert.pem';
-    $certCN = 'Brak certyfikatu';
-    if(file_exists($certFile)) {
-        $certContent = file_get_contents($certFile);
-        $certRes = openssl_x509_read($certContent);
-        if($certRes) {
-            $certData = openssl_x509_parse($certRes);
-            $certCN = $certData['subject']['CN'] ?? 'Brak CN';
-        }
-    }
-@endphp
 
     <!-- HEADER -->
 <header class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
