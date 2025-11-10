@@ -66,7 +66,6 @@
                         <option value="">-- wybierz --</option>
                         <option value="male" {{ old('gender')=='male' ? 'selected' : '' }}>Mężczyzna</option>
                         <option value="female" {{ old('gender')=='female' ? 'selected' : '' }}>Kobieta</option>
-                        <option value="other" {{ old('gender')=='other' ? 'selected' : '' }}>Inna</option>
                     </select>
                 </div>
 
