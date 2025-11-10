@@ -471,29 +471,30 @@ class ConsultationController extends Controller
 
     public function generateCertificate(Request $request)
     {
+        $request->validate([
+            'password' => 'required|string|min:6',
+        ]);
+
         $user = auth()->user();
-        $password = $request->input('password');
-
-        if (!$password) {
-            return response()->json(['success' => false, 'message' => 'Podaj hasło do certyfikatu.']);
-        }
-
         $certDir = storage_path("app/certificates");
-        if (!file_exists($certDir)) mkdir($certDir, 0755, true);
-
         $certPath = $certDir . "/{$user->id}_user_cert.pem";
         $keyPath  = $certDir . "/{$user->id}_user_key.pem";
 
-        // Dane certyfikatu
+        // Utwórz katalog, jeśli nie istnieje
+        if (!file_exists($certDir)) {
+            mkdir($certDir, 0755, true);
+        }
+
+        $password = $request->input('password');
+
         $dn = [
             "countryName" => "PL",
             "stateOrProvinceName" => "Małopolskie",
             "localityName" => "Nowy Sącz",
             "organizationName" => "FEER",
-            "organizationalUnitName" => "Certyfikaty podpisu",
+            "organizationalUnitName" => "Certyfikaty podpisu dokumentacji",
             "commonName" => $user->name,
-            "emailAddress" => $user->email,
-            "authorizedBy" => "Ziemowit Gil (FEER)"
+            "emailAddress" => $user->email
         ];
 
         // Generowanie klucza prywatnego
@@ -502,13 +503,17 @@ class ConsultationController extends Controller
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
         ]);
 
-        // Tworzenie certyfikatu self-signed
+        // CSR i certyfikat self-signed ważny 180 dni
         $csr = openssl_csr_new($dn, $privkey);
-        $cert = openssl_csr_sign($csr, null, $privkey, 365); // ważny 365 dni
+        $cert = openssl_csr_sign($csr, null, $privkey, 180);
 
+        // Eksport certyfikatu
         openssl_x509_export($cert, $certOut);
+
+        // Eksport klucza prywatnego z hasłem
         openssl_pkey_export($privkey, $keyOut, $password);
 
+        // Zapis do plików
         file_put_contents($certPath, $certOut);
         file_put_contents($keyPath, $keyOut);
 
@@ -517,7 +522,6 @@ class ConsultationController extends Controller
             'message' => 'Certyfikat X.509 został wygenerowany.'
         ]);
     }
-
     public function downloadCertificate()
     {
         $user = auth()->user();
