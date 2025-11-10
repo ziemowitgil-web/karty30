@@ -59,8 +59,6 @@
         <a href="{{ route('schedules.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
         <a href="{{ route('consultations.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
 
-        <div class="block px-4 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
-            CN: {{ $certCN }}
         </div>
 
         <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-mobile').submit();" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
