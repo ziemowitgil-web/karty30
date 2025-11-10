@@ -4,7 +4,7 @@
 @section('content')
     <div class="container mx-auto p-6 max-w-3xl">
         <h1 class="text-2xl font-bold mb-4">Zarządzanie certyfikatem</h1>
-        
+
 
         {{-- Status certyfikatu --}}
         @if($certExists)
@@ -39,8 +39,8 @@
         @if($certExists)
             <div class="mb-4 p-4 rounded border border-gray-300 bg-gray-50 flex gap-2 flex-wrap">
                 <a href="{{ route('consultations.certificate.download') }}"
-                   class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Pobierz certyfikat</a>
-                <button id="revokeCert" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Cofnij certyfikat</button>
+                   class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Pobierz klucz prywatny (PEM)</a>
+                <button id="revokeCert" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Unieważnienie certyfikatu</button>
             </div>
         @endif
     </div>
