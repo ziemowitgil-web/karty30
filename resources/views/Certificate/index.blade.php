@@ -132,7 +132,7 @@
             const downloadBtn = document.getElementById('download-cert');
             if (downloadBtn) {
                 downloadBtn.addEventListener('click', function () {
-                    window.location.href = '{{ route("certificate.download") }}';
+                    window.location.href = '{{ route("consultations.certificate.download") }}';
                 });
             }
         });
