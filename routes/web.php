@@ -163,6 +163,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('consultations.details');
         // Test staging
         Route::post('/delete-test-data', [ConsultationController::class, 'deleteTestData'])->name('deleteTestData');
+
+        // Certyfikat
+        Route::get('/certificate', [ConsultationController::class, 'certificateDetailsView'])->name('certificate.view');
+        Route::get('/certificate/json', [ConsultationController::class, 'certificateDetails'])->name('certificate.json');
+
+
     });
 
     /*

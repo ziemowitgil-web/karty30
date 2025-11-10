@@ -29,7 +29,7 @@
             <aside class="lg:col-span-1 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-6" role="complementary" aria-label="Panel boczny">
                 <header class="mb-4">
                     <h2 class="text-lg font-semibold text-gray-800">Witaj, {{ auth()->user()->name }}</h2>
-                    <p class="text-xs text-gray-500 mt-1">Tutaj znajdziesz podsumowanie swoich działań i statystyki.</p>
+                    <p class="text-xs text-gray-500 mt-1">Podsumowanie działań i statystyki.</p>
                 </header>
 
                 {{-- STATYSTYKI --}}
@@ -105,19 +105,26 @@
                     </a>
                 </section>
 
+                {{-- CERTYFIKAT UŻYTKOWNIKA --}}
+                <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2" aria-label="Informacje o certyfikacie użytkownika">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-2">Certyfikat użytkownika</h2>
+                    <p class="text-gray-500 text-xs">Kliknij przycisk, aby zobaczyć szczegóły certyfikatu w panelu.</p>
+                    <a href="{{ route('certificate.view') }}" class="w-full inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 rounded-md text-sm transition-colors" aria-label="Pokaż informacje o certyfikacie">
+                        Pokaż informacje o certyfikacie
+                    </a>
+                </section>
+
                 {{-- POŚWIADCZENIA / TRYB TEST --}}
-                @if(config('app.test_mode') != 1)
-                    <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2" aria-label="Poświadczenia użytkownika">
-                        <h2 class="text-lg font-semibold text-gray-800 mb-2">Poświadczenia</h2>
+                <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2" aria-label="Poświadczenia użytkownika">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-2">Poświadczenia</h2>
+                    @if(config('app.test_mode') != 1)
                         <p class="text-gray-500 text-xs">Możesz użyć <strong>klucza bezpieczeństwa (WebAuthn)</strong> lub <strong>certyfikatu PFX</strong> do logowania i podpisywania dokumentów.</p>
                         <button id="register-key-btn" class="w-full mb-1 bg-gray-800 hover:bg-gray-900 text-white py-1.5 rounded-md text-sm transition-colors" aria-label="Zarejestruj klucz bezpieczeństwa">Zarejestruj klucz</button>
                         <a href="#" class="w-full inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-md text-sm transition-colors" aria-label="Użyj certyfikatu PFX">Użyj certyfikatu PFX</a>
-                    </section>
-                @else
-                    <section class="bg-yellow-50 border border-yellow-200 rounded-2xl shadow-sm p-4">
+                    @else
                         <p class="text-yellow-800 text-sm">Tryb testowy: podpisane i zatwierdzone karty nie mają mocy prawnej, obsługa PFX jest wyłączona.</p>
-                    </section>
-                @endif
+                    @endif
+                </section>
 
                 {{-- DZISIEJSZE REZERWACJE --}}
                 <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4" aria-label="Rezerwacje na dziś">
