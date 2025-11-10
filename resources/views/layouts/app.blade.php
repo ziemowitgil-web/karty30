@@ -38,9 +38,7 @@
             <a href="{{ route('schedules.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
             <a href="{{ route('consultations.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
 
-            <div class="px-3 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
-                Certyfikat: {{ $certCN }}
-            </div>
+
 
             <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
             <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
