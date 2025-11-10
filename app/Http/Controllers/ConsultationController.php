@@ -461,90 +461,82 @@ class ConsultationController extends Controller
     }
 
 
-    public function generateCertificate(Request $request)
-    {
-        $user = Auth::user();
-        $certPath = storage_path("certs/{$user->id}_user_cert.pem");
-        $testCertFlag = false;
-
-        try {
-            $dn = [
-                "countryName" => "PL",
-                "stateOrProvinceName" => "Malopolska",
-                "localityName" => "Nowy Sacz",
-                "organizationName" => "FEER",
-                "organizationalUnitName" => "Certyfikaty",
-                "commonName" => $user->name,
-                "emailAddress" => $user->email
-            ];
-
-            $privateKey = openssl_pkey_new([
-                "private_key_type" => OPENSSL_KEYTYPE_RSA,
-                "private_key_bits" => 2048,
-            ]);
-
-            $csr = openssl_csr_new($dn, $privateKey);
-
-            // W środowisku staging generujemy krótko ważny certyfikat testowy
-            $validity = app()->environment('staging') ? 0.25 : 365*24*60*60; // 0.25 dnia = 6h
-            $cert = openssl_csr_sign($csr, null, $privateKey, $validity);
-
-            $certPem = '';
-            openssl_x509_export($cert, $certPem);
-            file_put_contents($certPath, $certPem);
-
-            if (app()->environment('staging')) {
-                $testCertFlag = true;
-            }
-
-            $certData = openssl_x509_parse($cert);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Certyfikat wygenerowany.',
-                'certificate' => [
-                    'common_name' => $certData['subject']['CN'] ?? null,
-                    'email' => $certData['subject']['emailAddress'] ?? null,
-                    'organization' => $certData['subject']['O'] ?? null,
-                    'organizational_unit' => $certData['subject']['OU'] ?? null,
-                    'valid_from' => isset($certData['validFrom_time_t']) ? date('c', $certData['validFrom_time_t']) : null,
-                    'valid_to' => isset($certData['validTo_time_t']) ? date('c', $certData['validTo_time_t']) : null,
-                    'sha1' => sha1($certPem),
-                    'is_test_certificate' => $testCertFlag,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Błąd generowania certyfikatu dla użytkownika {$user->id}: ".$e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Błąd generowania certyfikatu: '.$e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function revokeCertificate(Request $request)
+    public function generateCertificate()
     {
         $user = auth()->user();
-        $revoked = CertificateService::revokeForUser($user);
+        $certPath = storage_path("app/certificates/{$user->id}.crt");
+        $keyPath  = storage_path("app/certificates/{$user->id}.key");
 
-        $message = $revoked ? 'Certyfikat został cofnięty.' : 'Nie udało się cofnąć certyfikatu.';
-        return redirect()->route('consultations.certificate.view')->with('success', $message);
+        // Ustawienia certyfikatu
+        $dn = [
+            "countryName" => "PL",
+            "stateOrProvinceName" => "Małopolskie",
+            "localityName" => "Nowy Sącz",
+            "organizationName" => "FEER",
+            "organizationalUnitName" => "Certyfikaty podpisu niekwalfikowanego dokumentacji",
+            "commonName" => $user->name,
+            "emailAddress" => $user->email
+        ];
+
+        // Generowanie klucza prywatnego
+        $privkey = openssl_pkey_new([
+            "private_key_bits" => 2048,
+            "private_key_type" => OPENSSL_KEYTYPE_RSA,
+        ]);
+
+        // Tworzenie certyfikatu self-signed
+        $csr = openssl_csr_new($dn, $privkey);
+        $cert = openssl_csr_sign($csr, null, $privkey, 365); // ważny 365 dni
+
+        // Zapis do plików
+        openssl_x509_export($cert, $certOut);
+        openssl_pkey_export($privkey, $keyOut);
+
+        file_put_contents($certPath, $certOut);
+        file_put_contents($keyPath, $keyOut);
+
+        return redirect()->route('consultations.certificate.view')
+            ->with('success', 'Certyfikat X.509 został wygenerowany.');
     }
-
     public function downloadCertificate()
     {
         $user = auth()->user();
-        $cert = CertificateService::getCertificateForUser($user);
+        $certPath = storage_path("app/certificates/{$user->id}.crt");
 
-        if (!$cert) {
+        if (!file_exists($certPath)) {
             return redirect()->route('consultations.certificate.view')
                 ->with('error', 'Brak certyfikatu do pobrania.');
         }
 
-        return response()->streamDownload(function() use ($cert) {
-            echo $cert->content;
-        }, $cert->filename);
+        return response()->download($certPath, "{$user->name}_certificate.crt");
     }
+
+    public function revokeCertificate()
+    {
+        $user = auth()->user();
+        $certPath = storage_path("app/certificates/{$user->id}.crt");
+        $revokedPath = storage_path("app/certificates/revoked.crl");
+
+        if (!file_exists($certPath)) {
+            return redirect()->route('consultations.certificate.view')
+                ->with('error', 'Brak certyfikatu do cofnięcia.');
+        }
+
+        // Wczytaj certyfikat
+        $certContent = file_get_contents($certPath);
+        $cert = openssl_x509_read($certContent);
+
+        // Tutaj możesz odwołać certyfikat poprzez dodanie do CRL
+        // W praktyce self-signed CRL można trzymać w pliku
+        file_put_contents($revokedPath, $certContent, FILE_APPEND);
+
+        // Usuń certyfikat użytkownika
+        unlink($certPath);
+
+        return redirect()->route('consultations.certificate.view')
+            ->with('success', 'Certyfikat został cofnięty i dodany do CRL.');
+    }
+
 
 
 }
