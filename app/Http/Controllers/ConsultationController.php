@@ -430,44 +430,10 @@ class ConsultationController extends Controller
     /**
      * Widok certyfikatu
      */
-    public function certificateDetailsView()
-    {
-        $user = Auth::user();
-        $certPath = storage_path("app/certificates/{$user->id}_user_cert.pem");
-
-        $certData = null;
-        $isTestCert = false;
-        $certExists = false;
-
-        if (file_exists($certPath)) {
-            $certContent = file_get_contents($certPath);
-            $certResource = @openssl_x509_read($certContent);
-            if ($certResource !== false) {
-                $parsed = @openssl_x509_parse($certResource);
-                if ($parsed !== false) {
-                    $certData = [
-                        'common_name' => $parsed['subject']['CN'] ?? null,
-                        'email' => $parsed['subject']['emailAddress'] ?? null,
-                        'organization' => $parsed['subject']['O'] ?? null,
-                        'organizational_unit' => $parsed['subject']['OU'] ?? null,
-                        'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : null,
-                        'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : null,
-                        'sha1' => sha1($certContent),
-                    ];
-                    $certExists = true;
-                    $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) <= 6 * 3600);
-                }
-            }
-        }
-
-        return view('Certificate.index', compact('certData', 'isTestCert', 'certExists', 'user'));
-    }
-// =========================================================
+    // =========================================================
 // ===================== CERTYFIKAT =======================
 // =========================================================
 
-    use Illuminate\Http\Request;
-    use Illuminate\Support\Facades\Auth;
 
     public function certificateDetailsView()
     {
