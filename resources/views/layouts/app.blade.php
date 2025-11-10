@@ -114,7 +114,7 @@
             @endif
 
             <!-- Certificate mobile -->
-            <a href="{{ route('certificateDetailsView') }}" class="block px-4 py-2 rounded hover:bg-gray-700" title="Szczegóły certyfikatu X.509">
+            <a href="{{ route('consultations.certificateDetailsView') }}" class="block px-4 py-2 rounded hover:bg-gray-700" title="Szczegóły certyfikatu X.509">
                 Certyfikat: {{ $certCN }}
             </a>
 
