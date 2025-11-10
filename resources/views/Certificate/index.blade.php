@@ -1,72 +1,86 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto py-4">
-        <h1 id="certificate-title" class="text-2xl font-semibold mb-4">Certyfikat użytkownika</h1>
+    <div class="container mx-auto p-6 max-w-3xl">
 
-        <div id="alert-container" aria-live="polite"></div>
+        <h1 class="text-3xl font-bold mb-6 text-gray-900">Certyfikat użytkownika</h1>
 
-        <div id="certificate-data">
-            @if($certExists && $certData)
-                <div class="card shadow-sm mb-4" role="region" aria-label="Dane certyfikatu">
-                    <div class="card-header bg-primary text-white">
-                        <h2 class="h5 mb-0">Dane certyfikatu</h2>
-                    </div>
-                    <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-                        <div class="flex justify-between">
-                            <span class="font-medium">Imię i nazwisko:</span>
-                            <span>{{ $certData['common_name'] }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="font-medium">Email:</span>
-                            <span>{{ $certData['email'] }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="font-medium">Organizacja:</span>
-                            <span>{{ $certData['organization'] }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="font-medium">Jednostka organizacyjna:</span>
-                            <span>{{ $certData['organizational_unit'] }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="font-medium">Ważny od:</span>
-                            <span>{{ $certData['valid_from'] }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="font-medium">Ważny do:</span>
-                            <span>{{ $certData['valid_to'] }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="font-medium">SHA1:</span>
-                            <span class="font-mono">{{ $certData['sha1'] }}</span>
-                        </div>
+        <div id="alert-container" aria-live="polite" class="mb-4"></div>
+
+        @if($certExists && $certData)
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6 space-y-4">
+
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-semibold text-gray-800">Dane certyfikatu</h2>
                         @if($isTestCert)
-                            <div class="col-span-full">
-                                <div class="alert alert-warning mt-3" role="alert">
-                                    To jest certyfikat testowy (staging).
-                                </div>
-                            </div>
+                            <span class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full text-sm font-medium">
+                            Testowy
+                        </span>
                         @endif
                     </div>
-                    <div class="card-footer flex gap-2 justify-start p-4">
-                        <button id="download-cert" class="btn btn-success" aria-label="Pobierz certyfikat">
-                            <i class="bi bi-download"></i> Pobierz certyfikat
-                        </button>
-                        <button id="revoke-cert" class="btn btn-danger" aria-label="Cofnij certyfikat">
-                            <i class="bi bi-x-circle"></i> Cofnij certyfikat
-                        </button>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-600 font-medium">Imię i nazwisko</p>
+                            <p class="text-gray-800">{{ $certData['common_name'] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 font-medium">Email</p>
+                            <p class="text-gray-800">{{ $certData['email'] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 font-medium">Organizacja</p>
+                            <p class="text-gray-800">{{ $certData['organization'] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 font-medium">Jednostka organizacyjna</p>
+                            <p class="text-gray-800">{{ $certData['organizational_unit'] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 font-medium">Ważny od</p>
+                            <p class="text-gray-800">{{ $certData['valid_from'] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 font-medium">Ważny do</p>
+                            <p class="text-gray-800">{{ $certData['valid_to'] }}</p>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <p class="text-gray-600 font-medium">SHA1</p>
+                            <p class="text-gray-800 font-mono break-all">{{ $certData['sha1'] }}</p>
+                        </div>
                     </div>
+
+                    @if(auth()->user()->is_root)
+                        <div class="p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
+                            Certyfikat systemowy oraz certyfikat do komunikacji API są ważne.
+                            Tylko użytkownik root widzi pełne dane.
+                        </div>
+                    @endif
+
                 </div>
-            @else
-                <div class="alert alert-warning mb-3" role="alert">
+
+                <div class="p-6 flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50">
+                    <button id="download-cert" class="btn btn-success flex-1 flex justify-center items-center gap-2" aria-label="Pobierz certyfikat">
+                        <i class="bi bi-download"></i> Pobierz certyfikat
+                    </button>
+                    <button id="revoke-cert" class="btn btn-danger flex-1 flex justify-center items-center gap-2" aria-label="Cofnij certyfikat">
+                        <i class="bi bi-x-circle"></i> Cofnij certyfikat
+                    </button>
+                </div>
+            </div>
+
+        @else
+            <div class="bg-white p-6 rounded-xl shadow flex flex-col gap-4 items-center">
+                <div class="text-gray-700 text-center">
                     Brak certyfikatu. Możesz wygenerować nowy certyfikat.
                 </div>
-                <button id="generate-cert" class="btn btn-primary" aria-label="Generuj certyfikat">
+                <button id="generate-cert" class="btn btn-primary flex items-center gap-2" aria-label="Generuj certyfikat">
                     <i class="bi bi-plus-circle"></i> Generuj certyfikat
                 </button>
-            @endif
-        </div>
+            </div>
+        @endif
+
     </div>
 @endsection
 
@@ -75,61 +89,52 @@
         document.addEventListener('DOMContentLoaded', function () {
             const token = '{{ csrf_token() }}';
 
-            const generateBtn = document.getElementById('generate-cert');
-            if (generateBtn) {
-                generateBtn.addEventListener('click', function () {
-                    fetch('{{ route("consultations.certificate.generate") }}', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': token,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            showAlert(data.message, data.success ? 'success' : 'danger');
-                            if (data.success) setTimeout(() => location.reload(), 500);
-                        })
-                        .catch(() => showAlert('Wystąpił błąd podczas generowania certyfikatu.', 'danger'));
-                });
-            }
-
-            const revokeBtn = document.getElementById('revoke-cert');
-            if (revokeBtn) {
-                revokeBtn.addEventListener('click', function () {
-                    if (!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
-
-                    fetch('{{ route("consultations.certificate.revoke") }}', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': token,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            showAlert(data.message, data.success ? 'success' : 'danger');
-                            if (data.success) setTimeout(() => location.reload(), 500);
-                        })
-                        .catch(() => showAlert('Wystąpił błąd podczas cofania certyfikatu.', 'danger'));
-                });
-            }
-
-            const downloadBtn = document.getElementById('download-cert');
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', function () {
-                    window.location.href = '{{ route("consultations.certificate.download") }}';
-                });
-            }
-
             function showAlert(message, type = 'info') {
                 const container = document.getElementById('alert-container');
                 container.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
                                     ${message}
                                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                                </div>`;
+            }
+
+            const generateBtn = document.getElementById('generate-cert');
+            if (generateBtn) {
+                generateBtn.addEventListener('click', function () {
+                    fetch('{{ route("consultations.certificate.generate") }}', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            showAlert(data.message, data.success ? 'success' : 'danger');
+                            if(data.success) setTimeout(() => location.reload(), 500);
+                        })
+                        .catch(() => showAlert('Błąd generowania certyfikatu', 'danger'));
+                });
+            }
+
+            const revokeBtn = document.getElementById('revoke-cert');
+            if (revokeBtn) {
+                revokeBtn.addEventListener('click', function () {
+                    if(!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
+                    fetch('{{ route("consultations.certificate.revoke") }}', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            showAlert(data.message, data.success ? 'success' : 'danger');
+                            if(data.success) setTimeout(() => location.reload(), 500);
+                        })
+                        .catch(() => showAlert('Błąd cofania certyfikatu', 'danger'));
+                });
+            }
+
+            const downloadBtn = document.getElementById('download-cert');
+            if(downloadBtn) {
+                downloadBtn.addEventListener('click', function () {
+                    window.location.href = '{{ route("consultations.certificate.download") }}';
+                });
             }
         });
     </script>
