@@ -86,9 +86,7 @@
                         <td class="px-4 py-2">{{ $c->duration_minutes }} min</td>
                         <td class="px-4 py-2 font-mono">{{ $c->sha1sum ?? '-' }}</td>
                         <td class="px-4 py-2 flex flex-wrap gap-2">
-                            <a href="{{ route('consultations.details', $c) }}"
-                               class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400">
-                                Szczegóły
+
                             </a>
                             <button class="history-button bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400"
                                     data-id="{{ $c->id }}" aria-label="Historia konsultacji {{ $c->id }}">
