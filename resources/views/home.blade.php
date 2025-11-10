@@ -39,6 +39,24 @@
             @endif
         @endforeach
 
+        {{-- OSTRZEŻENIE O BRAKU CERTYFIKATU --}}
+        @unless($certExists)
+            <div class="p-4 bg-red-100 border border-red-400 text-red-800 rounded-xl shadow-sm animate-pulse" role="alert" aria-live="assertive">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-exclamation-triangle text-xl text-red-600"></i>
+                        <div>
+                            <p class="font-semibold text-red-800">Nie posiadasz ważnego certyfikatu!</p>
+                            <p class="text-sm text-red-700">Nie możesz podpisywać żadnych dokumentów, dopóki nie wygenerujesz nowego certyfikatu.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('consultations.certificate.view') }}" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                        Wygeneruj teraz
+                    </a>
+                </div>
+            </div>
+        @endunless
+
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
             {{-- PANEL BOCZNY --}}
@@ -103,32 +121,30 @@
 
                 {{-- KAFELKI AKCJI --}}
                 <section class="grid grid-cols-2 sm:grid-cols-5 gap-3" aria-label="Skróty akcji">
-                    <a href="{{ route('consultations.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5" aria-label="Dodaj nową konsultację">
+                    <a href="{{ route('consultations.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5">
                         <i class="fas fa-stethoscope text-base mb-1"></i>
                         <span class="font-medium text-sm">Nowa konsultacja</span>
                     </a>
-                    <a href="{{ route('schedules.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5" aria-label="Dodaj nową rezerwację">
+                    <a href="{{ route('schedules.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5">
                         <i class="fas fa-calendar-plus text-base mb-1"></i>
                         <span class="font-medium text-sm">Nowa rezerwacja</span>
                     </a>
-                    <a href="{{ route('clients.index') }}" class="bg-green-600 hover:bg-green-700 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5" aria-label="Lista klientów">
+                    <a href="{{ route('clients.index') }}" class="bg-green-600 hover:bg-green-700 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5">
                         <i class="fas fa-users text-base mb-1"></i>
                         <span class="font-medium text-sm">Lista klientów</span>
                     </a>
-                    <a href="{{ route('raport') }}" class="bg-gray-700 hover:bg-gray-800 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5" aria-label="Przegląd raportów">
+                    <a href="{{ route('raport') }}" class="bg-gray-700 hover:bg-gray-800 text-white rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5">
                         <i class="fas fa-file-alt text-base mb-1"></i>
                         <span class="font-medium text-sm">Raporty</span>
                     </a>
-
-                    {{-- Subtelny kafelek Zarządzaj certyfikatem --}}
-                    <a href="{{ route('consultations.certificate.view') }}" class="bg-yellow-100 hover:bg-yellow-200 text-gray-800 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5" aria-label="Zarządzaj certyfikatem">
+                    <a href="{{ route('consultations.certificate.view') }}" class="bg-yellow-100 hover:bg-yellow-200 text-gray-800 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5">
                         <i class="fas fa-id-card text-base mb-1"></i>
                         <span class="font-medium text-sm">Zarządzaj certyfikatem</span>
                     </a>
                 </section>
 
                 {{-- INFORMACJE O CERTYFIKACIE --}}
-                <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2" aria-label="Informacje o certyfikacie użytkownika">
+                <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2">
                     <h2 class="text-lg font-semibold text-gray-800 mb-2">Twój certyfikat</h2>
 
                     @if($certExists)
@@ -148,7 +164,7 @@
                         <p class="text-gray-500 text-xs">Brak zaplanowanych rezerwacji na dzisiaj.</p>
                     @else
                         <div class="overflow-x-auto">
-                            <table class="min-w-full text-sm divide-y divide-gray-200" role="table">
+                            <table class="min-w-full text-sm divide-y divide-gray-200">
                                 <thead class="bg-gray-100 text-gray-700">
                                 <tr>
                                     <th class="text-left px-2 py-1 font-semibold">Godzina</th>
@@ -171,13 +187,13 @@
                 </section>
 
                 {{-- NAJBLIŻSZE 7 DNI --}}
-                <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4" aria-label="Rezerwacje na najbliższe 7 dni">
+                <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
                     <h2 class="text-lg font-semibold text-gray-800 mb-2">Następne 7 dni</h2>
                     @if($weekSchedules->isEmpty())
                         <p class="text-gray-500 text-xs">Brak zaplanowanych rezerwacji w ciągu najbliższego tygodnia.</p>
                     @else
                         <div class="overflow-x-auto">
-                            <table class="min-w-full text-sm divide-y divide-gray-200" role="table">
+                            <table class="min-w-full text-sm divide-y divide-gray-200">
                                 <thead class="bg-gray-100 text-gray-700">
                                 <tr>
                                     <th class="text-left px-2 py-1 font-semibold">Data</th>
