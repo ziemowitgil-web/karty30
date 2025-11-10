@@ -25,7 +25,7 @@
                 Brak certyfikatu. Możesz wygenerować nowy certyfikat.
             </div>
 
-            <form action="{{ route('cg') }}" method="POST">
+            <form action="{{ route('certificate.generate') }}" method="POST">
                 @csrf
                 <button type="submit" class="btn btn-primary">Generuj certyfikat</button>
             </form>
