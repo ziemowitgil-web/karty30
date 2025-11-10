@@ -36,10 +36,19 @@
 
 @php
     $accessible = request()->query('accessibility') == 1 || session('accessible_view') == true;
+
+    // Certyfikat użytkownika - CN
     $certDir = storage_path('app/certificates');
     $certFile = $certDir . '/' . Auth::user()->id . '_user_cert.pem';
-    $certExists = file_exists($certFile);
-    $certDisplay = $certExists ? basename($certFile) : 'Brak certyfikatu';
+    $certCN = 'Brak certyfikatu';
+    if(file_exists($certFile)) {
+        $certContent = file_get_contents($certFile);
+        $certRes = openssl_x509_read($certContent);
+        if($certRes) {
+            $certData = openssl_x509_parse($certRes);
+            $certCN = $certData['subject']['CN'] ?? 'Brak CN';
+        }
+    }
 @endphp
 
     <!-- HEADER -->
@@ -54,7 +63,7 @@
         <!-- Desktop menu -->
         <nav class="hidden md:flex items-center space-x-4" role="navigation" aria-label="Główne menu">
             @auth
-                <!-- Akcje szybkie -->
+                <!-- Szybkie akcje -->
                 <a href="{{ route('schedules.create') }}" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Rezerwacja</a>
                 <a href="{{ route('clients.create') }}" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Klient</a>
 
@@ -72,9 +81,9 @@
                     <a href="{{ route('logs') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
                 @endif
 
-                <!-- Informacja o certyfikacie -->
-                <div class="px-3 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certDisplay }}">
-                    Certyfikat: {{ $certDisplay->name }}
+                <!-- Informacja o CN certyfikatu -->
+                <div class="px-3 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
+                    CN: {{ $certCN }}
                 </div>
 
                 <!-- Wylogowanie -->
@@ -117,9 +126,9 @@
                 <a href="{{ route('logs') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
             @endif
 
-            <!-- Info certyfikat -->
-            <div class="block px-4 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certDisplay }}">
-                Certyfikat: {{ $certDisplay }}
+            <!-- Info CN certyfikatu -->
+            <div class="block px-4 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
+                CN: {{ $certCN }}
             </div>
 
             <div class="border-t border-gray-700 my-2"></div>
