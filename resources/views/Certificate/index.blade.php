@@ -5,6 +5,53 @@
     <div class="container mx-auto p-6 max-w-3xl">
         <h1 class="text-2xl font-bold mb-4">Zarządzanie certyfikatem</h1>
 
+        <div class="p-4 rounded-lg border border-gray-300 bg-gray-50 space-y-3"
+             aria-label="Informacje o certyfikacie X.509">
+            <h2 class="text-lg font-semibold text-gray-900">Certyfikat X.509 – wyjaśnienie</h2>
+
+            <p class="text-gray-700">
+                <strong>Certyfikat X.509</strong> to cyfrowy dokument używany w bezpieczeństwie komputerowym i komunikacji elektronicznej, który pozwala jednoznacznie potwierdzić tożsamość osoby, organizacji lub systemu w sieci. Działa jak elektroniczny dowód tożsamości.
+            </p>
+
+            <h3 class="text-md font-semibold text-gray-800">Co zawiera certyfikat X.509?</h3>
+            <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                <li><strong>Common Name (CN)</strong> – imię i nazwisko osoby lub nazwa systemu.</li>
+                <li><strong>Organizacja (O)</strong> – nazwa organizacji, która jest właścicielem certyfikatu.</li>
+                <li><strong>Jednostka organizacyjna (OU)</strong> – opcjonalnie dział lub departament w organizacji.</li>
+                <li><strong>Adres e-mail</strong> – kontaktowy adres właściciela certyfikatu.</li>
+                <li><strong>Daty ważności</strong> – okres, w którym certyfikat jest ważny (od i do).</li>
+                <li><strong>Unikalny identyfikator / fingerprint</strong> – skrót SHA1 lub SHA256 używany do szybkiej weryfikacji certyfikatu.</li>
+            </ul>
+
+            <h3 class="text-md font-semibold text-gray-800">Do czego służy certyfikat X.509?</h3>
+            <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                <li><strong>Podpis elektroniczny dokumentów</strong> – zapewnia autentyczność i integralność podpisanych dokumentów.</li>
+                <li><strong>Szyfrowanie danych</strong> – umożliwia bezpieczne przesyłanie informacji w sieci.</li>
+                <li><strong>Uwierzytelnianie w systemach online</strong> – służy do weryfikacji tożsamości użytkowników lub systemów.</li>
+                <li><strong>Weryfikacja integralności</strong> – pozwala sprawdzić, czy dokument lub komunikacja nie zostały zmienione.</li>
+            </ul>
+
+            <h3 class="text-md font-semibold text-gray-800">Dlaczego ważne jest zachowanie ostrożności?</h3>
+            <p class="text-gray-700">
+                Nie zmieniaj certyfikatu samodzielnie, jeśli nie jesteś pewna/pewien jego działania. Niepoprawne operacje mogą spowodować brak możliwości podpisu dokumentów lub problemy z uwierzytelnianiem.
+            </p>
+
+            <p class="text-gray-700">
+                Certyfikaty wydaje <strong>Urząd Certyfikacji (UC)</strong>. W Twoim systemie jest to:
+            </p>
+            <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                <li>Ziemowit Gil – <a href="mailto:ziemowit.gil@feer.org.pl" class="text-blue-600 hover:underline">ziemowit.gil@feer.org.pl</a></li>
+                <li>lub <a href="mailto:certyfikaty@edukacja.cloud" class="text-blue-600 hover:underline">certyfikaty@edukacja.cloud</a></li>
+            </ul>
+
+            <p class="text-gray-700 font-medium mt-2">
+                Ta sekcja jest techniczna i połączona z UC. Jeśli nie wiesz, co robisz – nie ruszaj certyfikatu, aby nie zablokować się w systemie.
+            </p>
+
+            <p class="text-gray-600 italic text-sm mt-2">
+                ⚠️ Z uwagi na specyficzną technologię Java oraz komponenty AJAX, nie wszystkie elementy mogą być w pełni odczytywane przez czytniki ekranu (NVDA, JAWS itp.).
+            </p>
+        </div>
 
         {{-- Status certyfikatu --}}
         @if($certExists)
