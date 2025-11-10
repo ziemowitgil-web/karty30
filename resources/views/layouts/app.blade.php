@@ -70,7 +70,7 @@
                 @endif
 
                 <!-- Certificate info button -->
-                <a href="{{ route('certificateDetailsView') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" title="Szczegóły certyfikatu X.509">
+                <a href="{{ route('consultations.certificateDetailsView') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" title="Szczegóły certyfikatu X.509">
                     Certyfikat: {{ $certCN }}
                 </a>
 
