@@ -83,7 +83,7 @@
 
                 <!-- Informacja o CN certyfikatu -->
                 <div class="px-3 py-2 rounded bg-yellow-500 text-gray-900 font-semibold text-sm truncate-title" title="{{ $certCN }}">
-                    CN: {{ $certCN }}
+                    Certyfikat: {{ $certCN }}
                 </div>
 
                 <!-- Wylogowanie -->
