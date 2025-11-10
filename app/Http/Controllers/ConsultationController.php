@@ -357,4 +357,22 @@ class ConsultationController extends Controller
             }
         }
 
-        if (!fil
+        if (!file_exists($certPath)) return false;
+
+        $certContent = file_get_contents($certPath);
+        $cert = openssl_x509_read($certContent);
+        if (!$cert) return false;
+
+        $certData = openssl_x509_parse($cert);
+        if (!$certData) return false;
+
+        $validFrom = $certData['validFrom_time_t'] ?? 0;
+        $validTo = $certData['validTo_time_t'] ?? 0;
+        if ($now < $validFrom || $now > $validTo) return false;
+
+        $certEmail = $certData['subject']['emailAddress'] ?? null;
+        if (!$certEmail) return false;
+
+        return strtolower($certEmail) === strtolower($user->email);
+    }
+}
