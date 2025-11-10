@@ -70,7 +70,7 @@
                 @endif
 
                 <!-- Certificate info button -->
-                <a href="{{ route('consultations.certificateDetailsView') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" title="Szczegóły certyfikatu X.509">
+                <a href="" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" title="Szczegóły certyfikatu X.509">
                     Certyfikat: {{ $certCN }}
                 </a>
 
@@ -114,7 +114,7 @@
             @endif
 
             <!-- Certificate mobile -->
-            <a href="{{ route('consultations.certificateDetailsView') }}" class="block px-4 py-2 rounded hover:bg-gray-700" title="Szczegóły certyfikatu X.509">
+            <a href="" class="block px-4 py-2 rounded hover:bg-gray-700" title="Szczegóły certyfikatu X.509">
                 Certyfikat: {{ $certCN }}
             </a>
 
