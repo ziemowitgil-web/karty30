@@ -376,91 +376,6 @@ class ConsultationController extends Controller
         return strtolower($certEmail) === strtolower($user->email);
     }
 
-    // =========================================================
-// ===================== CERTYFIKAT =======================
-// =========================================================
-    public function certificateDetails(Request $request)
-    {
-        $user = Auth::user();
-        $certPath = storage_path("certs/{$user->id}_user_cert.pem");
-
-        if (!file_exists($certPath)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Brak certyfikatu dla użytkownika.'
-            ], 404);
-        }
-
-        $certContent = file_get_contents($certPath);
-        $cert = openssl_x509_read($certContent);
-
-        if (!$cert) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nie udało się odczytać certyfikatu.'
-            ], 500);
-        }
-
-        $certData = openssl_x509_parse($cert);
-
-        if (!$certData) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nie udało się sparsować certyfikatu.'
-            ], 500);
-        }
-
-        $details = [
-            'common_name' => $certData['subject']['CN'] ?? null,
-            'email' => $certData['subject']['emailAddress'] ?? null,
-            'organization' => $certData['subject']['O'] ?? null,
-            'organizational_unit' => $certData['subject']['OU'] ?? null,
-            'valid_from' => isset($certData['validFrom_time_t']) ? date('c', $certData['validFrom_time_t']) : null,
-            'valid_to' => isset($certData['validTo_time_t']) ? date('c', $certData['validTo_time_t']) : null,
-            'sha1' => sha1($certContent),
-            'is_test_certificate' => app()->environment('staging') && filemtime($certPath) && (time() - filemtime($certPath) < 6 * 3600)
-        ];
-
-        return response()->json([
-            'success' => true,
-            'certificate' => $details
-        ]);
-    }
-
-    public function certificateDetailsView()
-    {
-        $user = Auth::user();
-        $certPath = storage_path("certs/{$user->id}_user_cert.pem");
-
-        $certData = null;
-        $isTestCert = false;
-        $certExists = false;
-
-        if (file_exists($certPath)) {
-            $certContent = file_get_contents($certPath);
-            $certResource = @openssl_x509_read($certContent);
-            if ($certResource !== false) {
-                $parsed = @openssl_x509_parse($certResource);
-                if ($parsed !== false) {
-                    $certData = [
-                        'common_name' => $parsed['subject']['CN'] ?? null,
-                        'email' => $parsed['subject']['emailAddress'] ?? null,
-                        'organization' => $parsed['subject']['O'] ?? null,
-                        'organizational_unit' => $parsed['subject']['OU'] ?? null,
-                        'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : null,
-                        'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : null,
-                        'sha1' => sha1($certContent),
-                    ];
-                    $certExists = true;
-                    $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) <= 6 * 3600);
-                }
-            }
-        }
-
-        return view('Certificate.index', compact('certData', 'isTestCert', 'certExists', 'user'));
-    }
-
-
     /**
      * Pobranie danych certyfikatu (JSON)
      */
@@ -543,9 +458,10 @@ class ConsultationController extends Controller
                     $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) <= 6 * 3600);
                 }
             }
+        }
 
         return view('Certificate.index', compact('certData', 'isTestCert', 'certExists', 'user'));
-
+    }
 
     /**
      * Generowanie certyfikatu (self-signed) z hasłem
@@ -567,10 +483,10 @@ class ConsultationController extends Controller
 
         $date = date('Ymd_His');
         $certName = "{$user->name}_{$date}_user_cert.pem";
-        $keyName  = "{$user->name}_{$date}_user_key.pem";
+        $keyName = "{$user->name}_{$date}_user_key.pem";
 
         $certPath = $certDir . "/{$certName}";
-        $keyPath  = $certDir . "/{$keyName}";
+        $keyPath = $certDir . "/{$keyName}";
 
         // Dane certyfikatu
         $dn = [
@@ -650,10 +566,4 @@ class ConsultationController extends Controller
         return redirect()->route('consultations.certificate.view')
             ->with('success', 'Certyfikat został cofnięty i dodany do CRL.');
     }
-
-
-
-
 }
-
-
