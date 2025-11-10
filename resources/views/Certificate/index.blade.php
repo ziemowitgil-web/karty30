@@ -5,6 +5,7 @@
 
         <h1 class="text-3xl font-bold mb-6 text-gray-900">Certyfikat użytkownika</h1>
 
+        {{-- Alerty --}}
         <div id="alert-container" aria-live="polite" class="mb-4"></div>
 
         @if($certExists && $certData)
@@ -47,8 +48,6 @@
                     @if($isTestCert)
                         <p class="text-yellow-600 mt-4">To jest certyfikat testowy (staging).</p>
                     @endif
-
-
                 </div>
 
                 {{-- Prawa kolumna: akcje --}}
@@ -59,6 +58,7 @@
                     <button id="revoke-cert" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none" aria-label="Cofnij certyfikat">
                         Cofnij certyfikat
                     </button>
+                    <span id="spinner-actions" class="hidden text-gray-500 text-sm mt-2">Proszę czekać...</span>
                 </div>
 
             </div>
@@ -69,8 +69,13 @@
             <button id="generate-cert" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:ring-2 focus:ring-blue-300 focus:outline-none" aria-label="Generuj certyfikat">
                 Generuj certyfikat
             </button>
+            <span id="spinner-generate" class="hidden text-gray-500 text-sm mt-2">Generowanie certyfikatu...</span>
         @endif
 
+        {{-- Informacja o certyfikatach systemowych --}}
+        <div class="mt-6 text-gray-600 text-sm">
+            Certyfikat systemowy i certyfikat do komunikacji API są ważne, jednak dane są widoczne wyłącznie dla użytkownika root.
+        </div>
     </div>
 @endsection
 
@@ -84,10 +89,16 @@
                 container.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
             }
 
+            function toggleSpinner(id, show) {
+                const spinner = document.getElementById(id);
+                spinner.classList.toggle('hidden', !show);
+            }
+
             // Generowanie certyfikatu
             const generateBtn = document.getElementById('generate-cert');
-            if (generateBtn) {
-                generateBtn.addEventListener('click', function () {
+            if(generateBtn) {
+                generateBtn.addEventListener('click', function() {
+                    toggleSpinner('spinner-generate', true);
                     fetch('{{ route("consultations.certificate.generate") }}', {
                         method: 'POST',
                         headers: {
@@ -99,18 +110,23 @@
                         .then(res => res.json())
                         .then(data => {
                             showAlert(data.message, data.success ? 'success' : 'danger');
+                            toggleSpinner('spinner-generate', false);
                             if(data.success) setTimeout(() => location.reload(), 500);
                         })
-                        .catch(() => showAlert('Błąd podczas generowania certyfikatu.', 'danger'));
+                        .catch(() => {
+                            showAlert('Błąd podczas generowania certyfikatu.', 'danger');
+                            toggleSpinner('spinner-generate', false);
+                        });
                 });
             }
 
             // Cofanie certyfikatu
             const revokeBtn = document.getElementById('revoke-cert');
-            if (revokeBtn) {
-                revokeBtn.addEventListener('click', function () {
-                    if (!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
+            if(revokeBtn) {
+                revokeBtn.addEventListener('click', function() {
+                    if(!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
 
+                    toggleSpinner('spinner-actions', true);
                     fetch('{{ route("consultations.certificate.revoke") }}', {
                         method: 'POST',
                         headers: {
@@ -122,19 +138,24 @@
                         .then(res => res.json())
                         .then(data => {
                             showAlert(data.message, data.success ? 'success' : 'danger');
+                            toggleSpinner('spinner-actions', false);
                             if(data.success) setTimeout(() => location.reload(), 500);
                         })
-                        .catch(() => showAlert('Błąd podczas cofania certyfikatu.', 'danger'));
+                        .catch(() => {
+                            showAlert('Błąd podczas cofania certyfikatu.', 'danger');
+                            toggleSpinner('spinner-actions', false);
+                        });
                 });
             }
 
             // Pobranie certyfikatu
             const downloadBtn = document.getElementById('download-cert');
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', function () {
+            if(downloadBtn) {
+                downloadBtn.addEventListener('click', function() {
                     window.location.href = '{{ route("consultations.certificate.download") }}';
                 });
             }
+
         });
     </script>
 @endsection
