@@ -10,10 +10,13 @@
             <div class="border-2 border-yellow-400 bg-yellow-50 p-4 rounded-lg mb-6 flex items-start gap-4">
                 <img src="https://cdn-icons-png.flaticon.com/512/1828/1828843.png" alt="Ostrzeżenie" class="w-10 h-10">
                 <div>
-                    <p class="text-yellow-800 font-semibold mb-2">Uwaga: Certyfikat testowy systemu jest aktywny (STAGING)</p>
+                    <p class="text-yellow-800 font-semibold mb-2">
+                        Uwaga: Certyfikat testowy systemu jest aktywny (STAGING)
+                    </p>
                     <form method="POST" action="{{ route('consultations.deleteTestData') }}">
                         @csrf
-                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-400">
+                        <button type="submit"
+                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-400">
                             Usuń dane testowe
                         </button>
                     </form>
@@ -22,7 +25,7 @@
         @endif
 
         <a href="{{ route('consultations.create') }}"
-           class="bg-green-800 text-white px-4 py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-3 focus:ring-offset-2 focus:ring-blue-400 mb-6 inline-block">
+           class="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 focus:outline-none focus:ring-3 focus:ring-offset-2 focus:ring-green-500 mb-6 inline-block">
             Nowa karta konsultacyjna
         </a>
 
@@ -47,8 +50,7 @@
                         <td class="px-4 py-2">{{ \Carbon\Carbon::parse($c->consultation_datetime)->format('d.m.Y H:i') }}</td>
                         <td class="px-4 py-2">{{ $c->duration_minutes }} min</td>
                         <td class="px-4 py-2 flex flex-wrap gap-2">
-
-                            <button class="sign-button bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400"
+                            <button class="sign-button bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400"
                                     data-id="{{ $c->id }}" aria-label="Podpisz konsultację {{ $c->id }}">
                                 Podpisz
                             </button>
@@ -86,7 +88,6 @@
                         <td class="px-4 py-2">{{ $c->duration_minutes }} min</td>
                         <td class="px-4 py-2 font-mono">{{ $c->sha1sum ?? '-' }}</td>
                         <td class="px-4 py-2 flex flex-wrap gap-2">
-
                             <button class="history-button bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400"
                                     data-id="{{ $c->id }}" aria-label="Historia konsultacji {{ $c->id }}">
                                 Historia
@@ -108,16 +109,23 @@
             </table>
         </div>
 
-        <!-- Modal podpisu -->
-        <div id="signModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="signModalTitle">
+        {{-- Modal podpisu --}}
+        <div id="signModal"
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50"
+             role="dialog" aria-modal="true" aria-labelledby="signModalTitle">
             <div class="bg-white p-6 rounded-xl max-w-2xl w-full shadow-lg relative">
-                <h3 id="signModalTitle" class="text-2xl font-bold mb-4 text-center">Proces podpisywania karty konsultacji</h3>
+                <h3 id="signModalTitle" class="text-2xl font-bold mb-4 text-center">
+                    Proces podpisywania karty konsultacji
+                </h3>
                 <p class="text-gray-600 mb-6 text-center">
-                    Podpis cyfrowy zapewnia bezpieczeństwo i integralność dokumentu. Każdy etap jest monitorowany, a dane są szyfrowane i oznaczane unikalnym SHA1.
+                    Podpis cyfrowy zapewnia bezpieczeństwo i integralność dokumentu. Każdy etap jest monitorowany,
+                    a dane są szyfrowane i oznaczane unikalnym SHA1.
                 </p>
+
                 <div class="flex items-center gap-4 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg mb-6 shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 11c0-1.105.895-2 2-2s2 .895 2 2-.895 2-2 2-2-.895-2-2zm0 0v6m6-6v6m-12-6v6"/>
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M12 11c0-1.105.895-2 2-2s2 .895 2 2-.895 2-2 2-2-.895-2-2zm0 0v6m6-6v6m-12-6v6"/>
                     </svg>
                     <div>
                         <span class="text-gray-700 font-medium">Certyfikat użytkownika:</span>
@@ -138,8 +146,10 @@
                         'Szyfrowanie danych i generowanie SHA1',
                         'Czyszczenie danych tymczasowych i finalizacja'
                     ] as $index => $step)
-                        <li class="step flex items-center gap-4 p-4 border rounded-lg bg-white shadow transition duration-300 hover:scale-105">
-                            <div class="step-number w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 text-gray-500 font-bold text-lg">{{ $index+1 }}</div>
+                        <li class="step flex items-center gap-4 p-4 border rounded-lg bg-white shadow transition duration-300">
+                            <div class="step-number w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 text-gray-500 font-bold text-lg">
+                                {{ $index+1 }}
+                            </div>
                             <div class="flex flex-col">
                                 <span class="text-gray-700 font-medium">{{ $step }}</span>
                                 <span class="text-gray-400 text-sm" id="stepDesc{{ $index }}">Oczekiwanie...</span>
@@ -152,23 +162,13 @@
                     SHA1 dokumentu: <span id="shaDisplay">GENEROWANY...</span>
                 </div>
 
-                <!-- Komunikat i licznik automatycznego powrotu -->
-                <div id="autoReturnMessage" class="mt-4 text-center text-gray-700 font-medium hidden">
+                <div id="autoReturnMessage" class="mt-4 text-center text-gray-700 font-medium hidden" aria-live="assertive">
+                    Operacja zakończona pomyślnie.<br>
                     Powrót do strony głównej za <span id="returnCountdown">10</span> sekund...
                 </div>
 
-                <button id="closeSignModal" class="mt-6 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 w-full" aria-label="Zamknij modal podpisu">
-                    Zamknij
-                </button>
-            </div>
-        </div>
-
-        <!-- Modal historii -->
-        <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
-            <div class="bg-white p-6 rounded-lg max-w-lg w-full">
-                <h3 id="historyModalTitle" class="text-lg font-semibold mb-4">Historia podpisów karty</h3>
-                <ul id="historyList" class="list-disc list-inside space-y-1 text-gray-700 max-h-64 overflow-y-auto"></ul>
-                <button id="closeHistoryModal" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400">
+                <button id="closeSignModal"
+                        class="mt-6 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 w-full">
                     Zamknij
                 </button>
             </div>
@@ -181,98 +181,65 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // ---------------- Podpis ----------------
+                const signModal = document.getElementById('signModal');
+                const autoReturnMessage = document.getElementById('autoReturnMessage');
+                const returnCountdown = document.getElementById('returnCountdown');
+
                 document.querySelectorAll('.sign-button').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        const consultationId = btn.dataset.id;
-                        const modal = document.getElementById('signModal');
-                        modal.classList.remove('hidden');
+                        const id = btn.dataset.id;
+                        signModal.classList.remove('hidden');
 
-                        const steps = modal.querySelectorAll('.step');
-                        const stepDesc = Array.from(modal.querySelectorAll('[id^=stepDesc]'));
+                        const steps = document.querySelectorAll('.step');
+                        const stepDesc = Array.from(document.querySelectorAll('[id^=stepDesc]'));
                         const progressBar = document.getElementById('progressBar');
-                        const autoReturnMessage = document.getElementById('autoReturnMessage');
-                        const returnCountdown = document.getElementById('returnCountdown');
                         let current = 0;
 
                         function nextStep() {
-                            if(current < steps.length){
+                            if (current < steps.length) {
                                 steps[current].classList.add('completed');
                                 steps[current].querySelector('.step-number').classList.add('completed');
                                 stepDesc[current].textContent = 'Wykonywanie...';
-                                progressBar.style.width = ((current+1)/steps.length*100)+'%';
+                                progressBar.style.width = ((current + 1) / steps.length * 100) + '%';
                                 current++;
                                 setTimeout(nextStep, 700);
                             } else {
-                                fetch(`/consultations/${consultationId}/sign-json`, {
+                                fetch(`/consultations/${id}/sign-json`, {
                                     method: 'POST',
                                     headers: {
                                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                         'Accept': 'application/json'
                                     }
-                                }).then(res=>res.json())
-                                    .then(data=>{
-                                        if(data.success){
+                                }).then(res => res.json())
+                                    .then(data => {
+                                        if (data.success) {
                                             document.getElementById('shaDisplay').textContent = data.sha1;
-                                            alert(data.message);
-
-                                            // Pokaż komunikat i licznik powrotu
                                             autoReturnMessage.classList.remove('hidden');
+
                                             let countdown = 10;
                                             returnCountdown.textContent = countdown;
                                             const interval = setInterval(() => {
                                                 countdown--;
                                                 returnCountdown.textContent = countdown;
-                                                if(countdown <= 0){
+                                                if (countdown <= 0) {
                                                     clearInterval(interval);
+                                                    signModal.classList.add('hidden');
                                                     window.location.href = '/home';
                                                 }
                                             }, 1000);
                                         } else {
-                                            alert('Błąd: '+data.error);
+                                            alert('Błąd: ' + data.error);
                                         }
                                     })
-                                    .catch(err=>{
-                                        alert('Błąd komunikacji: '+err);
-                                    });
+                                    .catch(err => alert('Błąd komunikacji: ' + err));
                             }
                         }
                         nextStep();
                     });
                 });
 
-                document.getElementById('closeSignModal').addEventListener('click', ()=> {
-                    document.getElementById('signModal').classList.add('hidden');
-                });
-
-                // ---------------- Historia ----------------
-                document.querySelectorAll('.history-button').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const consultationId = this.dataset.id;
-                        const modal = document.getElementById('historyModal');
-                        const list = document.getElementById('historyList');
-                        list.innerHTML = '';
-                        modal.classList.remove('hidden');
-
-                        fetch(`/consultations/${consultationId}/history-json`)
-                            .then(res => res.json())
-                            .then(data => {
-                                if(data.logs.length === 0){
-                                    list.innerHTML = '<li>Brak historii</li>';
-                                } else {
-                                    data.logs.forEach(log => {
-                                        list.innerHTML += `<li>${log.created_at}: ${log.description}</li>`;
-                                    });
-                                }
-                            })
-                            .catch(err => {
-                                list.innerHTML = `<li>Błąd ładowania historii: ${err}</li>`;
-                            });
-                    });
-                });
-
-                document.getElementById('closeHistoryModal').addEventListener('click', ()=> {
-                    document.getElementById('historyModal').classList.add('hidden');
+                document.getElementById('closeSignModal').addEventListener('click', () => {
+                    signModal.classList.add('hidden');
                 });
             });
         </script>
