@@ -5,6 +5,33 @@
     <div class="container mx-auto p-6 max-w-3xl">
         <h1 class="text-2xl font-bold mb-4">Zarządzanie certyfikatem</h1>
 
+        {{-- Sekcja informacyjna o certyfikacie X.509 --}}
+        <div class="p-4 rounded border border-gray-300 bg-gray-50 space-y-3">
+            <h2 class="text-lg font-semibold text-gray-800">Certyfikat X.509 – co to jest?</h2>
+            <p class="text-gray-700">
+                Certyfikat X.509 to cyfrowy dokument, który potwierdza tożsamość osoby lub systemu w sieci.
+                Działa jak cyfrowy dowód tożsamości: dzięki niemu systemy mogą zweryfikować, że podpis elektroniczny lub połączenie rzeczywiście pochodzi od właściwej osoby.
+            </p>
+            <p class="text-gray-700">
+                Każdy certyfikat zawiera informacje o właścicielu, takie jak:
+            </p>
+            <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                <li>Imię i nazwisko / nazwa organizacji</li>
+                <li>Adres e-mail</li>
+                <li>Jednostkę organizacyjną</li>
+                <li>Daty ważności certyfikatu</li>
+                <li>Unikalny identyfikator SHA1 lub fingerprint</li>
+            </ul>
+            <p class="text-gray-700">
+                Certyfikat X.509 jest niezbędny do bezpiecznego podpisywania dokumentów elektronicznych, szyfrowania danych oraz uwierzytelniania w systemach online.
+                Dzięki niemu możesz mieć pewność, że dokumenty są prawdziwe i nie zostały zmienione.
+            </p>
+            <p class="text-red-600 font-semibold">
+                ⚠️ Jeśli nie wiesz dokładnie, do czego służy certyfikat lub jak go używać – nie próbuj go zmieniać ani generować na własną rękę.
+            </p>
+        </div>
+
+
         {{-- Status certyfikatu --}}
         @if($certExists)
             <div class="mb-4 p-4 rounded border border-green-400 bg-green-50">
