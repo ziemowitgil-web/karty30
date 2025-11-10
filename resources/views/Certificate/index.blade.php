@@ -2,10 +2,8 @@
 
 @section('content')
     <div class="container mx-auto p-6 max-w-4xl">
-
         <h1 class="text-3xl font-bold mb-6 text-gray-900">Certyfikat użytkownika</h1>
 
-        {{-- Alerty --}}
         <div id="alert-container" aria-live="polite" class="mb-4"></div>
 
         @if($certExists && $certData)
@@ -31,6 +29,10 @@
                         <td class="py-2 px-4 border-b">{{ $certData['organizational_unit'] }}</td>
                     </tr>
                     <tr>
+                        <td class="font-medium py-2 px-4 border-b">Autoryzował</td>
+                        <td class="py-2 px-4 border-b">{{ $certData['authorized_by'] }}</td>
+                    </tr>
+                    <tr>
                         <td class="font-medium py-2 px-4 border-b">Ważny od</td>
                         <td class="py-2 px-4 border-b">{{ $certData['valid_from'] }}</td>
                     </tr>
@@ -49,25 +51,24 @@
                     <p class="text-yellow-600 mb-4">To jest certyfikat testowy (staging).</p>
                 @endif
 
-                {{-- Akcje --}}
                 <div class="flex flex-col md:flex-row gap-3">
-                    <button id="download-cert" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:ring-2 focus:ring-green-300 focus:outline-none" aria-label="Pobierz certyfikat">
+                    <button id="download-cert" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:ring-2 focus:ring-green-300 focus:outline-none">
                         Pobierz certyfikat
                     </button>
-                    <button id="revoke-cert" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none" aria-label="Cofnij certyfikat">
+                    <button id="revoke-cert" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none">
                         Cofnij certyfikat
                     </button>
                 </div>
 
             </div>
         @else
-            {{-- Formularz generowania certyfikatu --}}
             <div class="bg-yellow-100 p-4 rounded shadow mb-4">
                 Brak certyfikatu. Możesz wygenerować nowy certyfikat.
             </div>
 
             <div class="flex flex-col md:flex-row gap-3 items-start">
-                <input type="password" id="cert-password" placeholder="Hasło do certyfikatu" class="px-4 py-2 border rounded focus:ring-2 focus:ring-blue-300 focus:outline-none w-full md:w-1/3">
+                <input type="password" id="cert-password" placeholder="Hasło do certyfikatu"
+                       class="px-4 py-2 border rounded focus:ring-2 focus:ring-blue-300 focus:outline-none w-full md:w-1/3">
                 <button id="generate-cert" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:ring-2 focus:ring-blue-300 focus:outline-none">
                     Generuj certyfikat
                 </button>
@@ -77,7 +78,6 @@
         <p class="mt-6 text-gray-600 text-sm">
             Certyfikat systemowy i certyfikat API są ważne, ale dane są widoczne tylko dla administratora.
         </p>
-
     </div>
 @endsection
 
@@ -91,7 +91,7 @@
                 container.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
             }
 
-            // Generowanie certyfikatu z hasłem
+            // Generowanie certyfikatu
             const generateBtn = document.getElementById('generate-cert');
             if (generateBtn) {
                 generateBtn.addEventListener('click', function () {
@@ -110,7 +110,7 @@
                         .then(res => res.json())
                         .then(data => {
                             showAlert(data.message, data.success ? 'success' : 'danger');
-                            if(data.success) setTimeout(() => location.reload(), 500);
+                            if (data.success) setTimeout(() => location.reload(), 500);
                         })
                         .catch(() => showAlert('Błąd podczas generowania certyfikatu.', 'danger'));
                 });
@@ -133,7 +133,7 @@
                         .then(res => res.json())
                         .then(data => {
                             showAlert(data.message, data.success ? 'success' : 'danger');
-                            if(data.success) setTimeout(() => location.reload(), 500);
+                            if (data.success) setTimeout(() => location.reload(), 500);
                         })
                         .catch(() => showAlert('Błąd podczas cofania certyfikatu.', 'danger'));
                 });
