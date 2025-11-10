@@ -49,7 +49,7 @@
                         <td class="px-4 py-2 flex flex-wrap gap-2">
 
                             <button class="sign-button bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400"
-                                    data-id="{{ $c->id }}" aria-label="Podpisz  {{ $c->id }}">
+                                    data-id="{{ $c->id }}" aria-label="Podpisz konsultację {{ $c->id }}">
                                 Podpisz
                             </button>
                             <button class="history-button bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400"
@@ -87,7 +87,6 @@
                         <td class="px-4 py-2 font-mono">{{ $c->sha1sum ?? '-' }}</td>
                         <td class="px-4 py-2 flex flex-wrap gap-2">
 
-                            </a>
                             <button class="history-button bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400"
                                     data-id="{{ $c->id }}" aria-label="Historia konsultacji {{ $c->id }}">
                                 Historia
@@ -153,6 +152,11 @@
                     SHA1 dokumentu: <span id="shaDisplay">GENEROWANY...</span>
                 </div>
 
+                <!-- Komunikat i licznik automatycznego powrotu -->
+                <div id="autoReturnMessage" class="mt-4 text-center text-gray-700 font-medium hidden">
+                    Powrót do strony głównej za <span id="returnCountdown">10</span> sekund...
+                </div>
+
                 <button id="closeSignModal" class="mt-6 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 w-full" aria-label="Zamknij modal podpisu">
                     Zamknij
                 </button>
@@ -187,6 +191,8 @@
                         const steps = modal.querySelectorAll('.step');
                         const stepDesc = Array.from(modal.querySelectorAll('[id^=stepDesc]'));
                         const progressBar = document.getElementById('progressBar');
+                        const autoReturnMessage = document.getElementById('autoReturnMessage');
+                        const returnCountdown = document.getElementById('returnCountdown');
                         let current = 0;
 
                         function nextStep() {
@@ -209,7 +215,19 @@
                                         if(data.success){
                                             document.getElementById('shaDisplay').textContent = data.sha1;
                                             alert(data.message);
-                                            location.reload();
+
+                                            // Pokaż komunikat i licznik powrotu
+                                            autoReturnMessage.classList.remove('hidden');
+                                            let countdown = 10;
+                                            returnCountdown.textContent = countdown;
+                                            const interval = setInterval(() => {
+                                                countdown--;
+                                                returnCountdown.textContent = countdown;
+                                                if(countdown <= 0){
+                                                    clearInterval(interval);
+                                                    window.location.href = '/home';
+                                                }
+                                            }, 1000);
                                         } else {
                                             alert('Błąd: '+data.error);
                                         }
