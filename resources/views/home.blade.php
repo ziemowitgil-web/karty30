@@ -121,7 +121,7 @@
                     </a>
 
                     {{-- Subtelny kafelek Zarządzaj certyfikatem --}}
-                    <a href="{{ route('consultations.certificateDetailsView') }}" class="bg-yellow-100 hover:bg-yellow-200 text-gray-800 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5" aria-label="Zarządzaj certyfikatem">
+                    <a href="{{ route('consultations.certificate.view') }}" class="bg-yellow-100 hover:bg-yellow-200 text-gray-800 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm transition-transform hover:-translate-y-0.5" aria-label="Zarządzaj certyfikatem">
                         <i class="fas fa-id-card text-base mb-1"></i>
                         <span class="font-medium text-sm">Zarządzaj certyfikatem</span>
                     </a>
