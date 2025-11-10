@@ -48,9 +48,7 @@
                         <p class="text-yellow-600 mt-4">To jest certyfikat testowy (staging).</p>
                     @endif
 
-                    @if($isSystemCert)
-                        <p class="text-blue-600 mt-2">Certyfikat systemowy / API. Dane widoczne tylko dla root.</p>
-                    @endif
+                    
                 </div>
 
                 {{-- Prawa kolumna: akcje --}}
