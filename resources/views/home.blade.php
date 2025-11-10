@@ -109,10 +109,11 @@
                 <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2" aria-label="Informacje o certyfikacie użytkownika">
                     <h2 class="text-lg font-semibold text-gray-800 mb-2">Certyfikat użytkownika</h2>
                     <p class="text-gray-500 text-xs">Kliknij przycisk, aby zobaczyć szczegóły certyfikatu w panelu.</p>
-                    <a href="{{ route('certificate.view') }}" class="w-full inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 rounded-md text-sm transition-colors" aria-label="Pokaż informacje o certyfikacie">
+                    <a href="{{ route('consultations.certificate.view') }}" class="w-full inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 rounded-md text-sm transition-colors" aria-label="Pokaż informacje o certyfikacie">
                         Pokaż informacje o certyfikacie
                     </a>
                 </section>
+
 
                 {{-- POŚWIADCZENIA / TRYB TEST --}}
                 <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2" aria-label="Poświadczenia użytkownika">
