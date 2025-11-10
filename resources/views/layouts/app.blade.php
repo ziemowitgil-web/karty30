@@ -17,11 +17,6 @@
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
         }
-
-        function toggleMobileSubmenu(id) {
-            const submenu = document.getElementById(id);
-            submenu.classList.toggle('hidden');
-        }
     </script>
 
     <style>
@@ -30,12 +25,18 @@
             outline: 2px dashed #fff;
             outline-offset: 2px;
         }
+        /* Subtle hover for better WCAG contrast */
+        a:hover, button:hover {
+            opacity: 0.85;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 flex flex-col min-h-screen">
 
 @php
     $accessible = request()->query('accessibility') == 1 || session('accessible_view') == true;
+    $userCert = Auth::user()->certificate ?? null;
+    $certCN = $userCert['CN'] ?? 'Brak certyfikatu';
 @endphp
 
     <!-- HEADER -->
@@ -43,16 +44,18 @@
     <div class="container mx-auto px-6 py-3 flex items-center justify-between">
 
         <!-- Logo / Title -->
-        <a href="{{ route('home') }}" class="text-xl font-bold hover:text-gray-300"> {{ config('app.name', 'Laravel') }} </a>
+        <a href="{{ route('home') }}" class="text-xl font-bold hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white">
+            {{ config('app.name', 'Laravel') }}
+        </a>
 
         <!-- Desktop Menu -->
         <nav class="hidden md:flex items-center space-x-3" role="navigation" aria-label="Główne menu">
             @auth
-                <!-- Akcje szybkie -->
+                <!-- Quick actions -->
                 <a href="{{ route('schedules.create') }}" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Rezerwacja</a>
                 <a href="{{ route('clients.create') }}" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white font-medium transition focus:outline-none focus:ring-2 focus:ring-white">+ Klient</a>
 
-                <!-- Nawigacja główna -->
+                <!-- Main navigation -->
                 <a href="{{ route('home') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
                 <a href="{{ route('schedules.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
                 <a href="{{ route('consultations.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
@@ -65,6 +68,11 @@
                 @if(auth()->user()->is_admin ?? true)
                     <a href="{{ route('logs') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Logi</a>
                 @endif
+
+                <!-- Certificate info button -->
+                <a href="{{ route('certificateDetailsView') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white" title="Szczegóły certyfikatu X.509">
+                    Certyfikat: {{ $certCN }}
+                </a>
 
                 <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
@@ -105,6 +113,11 @@
                 <a href="{{ route('logs') }}" class="block px-4 py-2 rounded hover:bg-gray-700">Logi</a>
             @endif
 
+            <!-- Certificate mobile -->
+            <a href="{{ route('certificateDetailsView') }}" class="block px-4 py-2 rounded hover:bg-gray-700" title="Szczegóły certyfikatu X.509">
+                Certyfikat: {{ $certCN }}
+            </a>
+
             <div class="border-t border-gray-700 my-2"></div>
             <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-mobile').submit();" class="block px-4 py-2 rounded hover:bg-gray-700">Wyloguj</a>
             <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
@@ -115,7 +128,6 @@
         @endguest
     </div>
 </header>
-
 
 <!-- Main content -->
 <main class="flex-grow container mx-auto px-6 py-6">
