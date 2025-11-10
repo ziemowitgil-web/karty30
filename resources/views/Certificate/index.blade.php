@@ -1,155 +1,114 @@
+{{-- resources/views/Certificate/index.blade.php --}}
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto p-6 max-w-4xl">
+    <div class="container mx-auto p-6 max-w-3xl">
+        <h1 class="text-2xl font-bold mb-4">Zarządzanie certyfikatem</h1>
 
-        <h1 class="text-3xl font-bold mb-6 text-gray-900">Twój certyfikat do podpisu dokumentacji</h1>
-
-        <div id="alert-container" aria-live="polite" class="mb-4"></div>
-
-        @if($certExists && $certData)
-            <div class="bg-white rounded shadow p-6">
-
-                <h2 class="text-2xl font-semibold mb-4">Dane certyfikatu</h2>
-                <table class="w-full table-auto border-collapse mb-6">
-                    <tbody>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Imię i nazwisko</td>
-                        <td class="py-2 px-4 border-b">{{ $certData['common_name'] }}</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Email</td>
-                        <td class="py-2 px-4 border-b">{{ $certData['email'] }}</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Organizacja</td>
-                        <td class="py-2 px-4 border-b">{{ $certData['organization'] }}</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Jednostka</td>
-                        <td class="py-2 px-4 border-b">{{ $certData['organizational_unit'] }}</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Autoryzował</td>
-                        <td class="py-2 px-4 border-b">Ziemowit Gil (FEER)</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Ścieżka certyfikacji</td>
-                        <td class="py-2 px-4 border-b font-mono break-all">Krajowa Izba Rozliczeniowa → UMWM → FEER → {{ $user->name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Ważny od</td>
-                        <td class="py-2 px-4 border-b">{{ $certData['valid_from'] }}</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">Ważny do</td>
-                        <td class="py-2 px-4 border-b">{{ $certData['valid_to'] }}</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium py-2 px-4 border-b">SHA1</td>
-                        <td class="py-2 px-4 border-b font-mono break-all">{{ $certData['sha1'] }}</td>
-                    </tr>
-                    </tbody>
-                </table>
-
-                <div class="flex flex-col md:flex-row gap-3">
-                    <button id="download-cert" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:ring-2 focus:ring-green-300 focus:outline-none">Pobierz certyfikat</button>
-                    <button id="revoke-cert" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none">Cofnij certyfikat</button>
-                </div>
-
-                <p class="mt-6 text-gray-600">Twój certyfikat służy do podpisu dokumentacji w systemie. Wszystkie dane w certyfikacie są widoczne tylko dla systemu.</p>
-            </div>
-
-        @else
-            <div class="bg-yellow-100 p-4 rounded shadow mb-4">
-                Nie posiadasz jeszcze certyfikatu. Możesz wygenerować nowy certyfikat do podpisu dokumentacji.
-            </div>
-
-            <div class="bg-white rounded shadow p-6">
-                <h2 class="text-xl font-semibold mb-2">Generowanie certyfikatu</h2>
-                <p class="mb-4 text-gray-700">
-                    Hasło chroni Twój klucz prywatny. Wybierz silne hasło, które będziesz pamiętać. Będzie potrzebne do używania certyfikatu w systemie.
-                </p>
-                <div class="flex flex-col md:flex-row gap-3 items-start">
-                    <input type="password" id="cert-password" placeholder="Hasło do certyfikatu" class="px-4 py-2 border rounded focus:ring-2 focus:ring-blue-300 focus:outline-none w-full md:w-1/3">
-                    <button id="generate-cert" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:ring-2 focus:ring-blue-300 focus:outline-none">Generuj certyfikat</button>
-                </div>
-
-                <h3 class="mt-6 font-semibold">Dane, które znajdą się w certyfikacie:</h3>
-                <ul class="list-disc list-inside text-gray-700">
-                    <li>Imię i nazwisko: {{ $user->name }}</li>
-                    <li>Email: {{ $user->email }}</li>
-                    <li>Organizacja: FEER</li>
-                    <li>Jednostka: Certyfikaty podpisu dokumentacji</li>
-                    <li>Autoryzował: Ziemowit Gil (FEER)</li>
-                    <li>Ścieżka certyfikacji: Krajowa Izba Rozliczeniowa → UMWM → FEER → {{ $user->name }}</li>
+        {{-- Status certyfikatu --}}
+        @if($certExists)
+            <div class="mb-4 p-4 rounded border border-green-400 bg-green-50">
+                <h2 class="font-semibold">Certyfikat aktywny {{ $isTestCert ? '(TESTOWY)' : '' }}</h2>
+                <ul class="mt-2">
+                    <li><strong>Imię i nazwisko:</strong> {{ $certData['common_name'] }}</li>
+                    <li><strong>Email:</strong> {{ $certData['email'] }}</li>
+                    <li><strong>Organizacja:</strong> {{ $certData['organization'] }}</li>
+                    <li><strong>Jednostka organizacyjna:</strong> {{ $certData['organizational_unit'] ?? '-' }}</li>
+                    <li><strong>SHA1:</strong> {{ $certData['sha1'] }}</li>
+                    <li><strong>Ważny od:</strong> {{ $certData['valid_from'] }}</li>
+                    <li><strong>Ważny do:</strong> {{ $certData['valid_to'] }}</li>
                 </ul>
+            </div>
+        @else
+            <div class="mb-4 p-4 rounded border border-gray-400 bg-gray-50">
+                <p>Nie masz jeszcze certyfikatu X.509. Możesz go wygenerować poniżej.</p>
             </div>
         @endif
 
+        {{-- Formularz generowania certyfikatu --}}
+        <div class="mb-4 p-4 rounded border border-blue-400 bg-blue-50">
+            <h2 class="font-semibold mb-2">Generowanie nowego certyfikatu</h2>
+            <input type="password" id="certPassword" placeholder="Hasło (min. 6 znaków)"
+                   class="border p-2 rounded w-full mb-2">
+            <button id="generateCert" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Generuj certyfikat</button>
+            <div id="certMessage" class="mt-2 text-sm"></div>
+        </div>
+
+        {{-- Akcje certyfikatu --}}
+        @if($certExists)
+            <div class="mb-4 p-4 rounded border border-gray-300 bg-gray-50 flex gap-2 flex-wrap">
+                <a href="{{ route('consultations.certificate.download') }}"
+                   class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Pobierz certyfikat</a>
+                <button id="revokeCert" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Cofnij certyfikat</button>
+            </div>
+        @endif
     </div>
-@endsection
 
-@section('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const token = '{{ csrf_token() }}';
+        document.addEventListener('DOMContentLoaded', () => {
+            const msgDiv = document.getElementById('certMessage');
 
-            function showAlert(message, type = 'info') {
-                const container = document.getElementById('alert-container');
-                container.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
-            }
+            // Generowanie certyfikatu
+            document.getElementById('generateCert').addEventListener('click', async () => {
+                const password = document.getElementById('certPassword').value;
+                msgDiv.textContent = '';
 
-            const generateBtn = document.getElementById('generate-cert');
-            if(generateBtn){
-                generateBtn.addEventListener('click', function(){
-                    const password = document.getElementById('cert-password').value.trim();
-                    if(!password){ showAlert('Podaj hasło do certyfikatu', 'warning'); return; }
+                if(password.length < 6){
+                    msgDiv.textContent = 'Hasło musi mieć min. 6 znaków ❌';
+                    return;
+                }
 
-                    fetch('{{ route("consultations.certificate.generate") }}', {
+                try {
+                    const response = await fetch("{{ route('consultations.certificate.generate') }}", {
                         method: 'POST',
                         headers: {
-                            'X-CSRF-TOKEN': token,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
                         body: JSON.stringify({ password })
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            showAlert(data.message, data.success ? 'success' : 'danger');
-                            if(data.success) setTimeout(() => location.reload(), 500);
-                        })
-                        .catch(() => showAlert('Błąd podczas generowania certyfikatu', 'danger'));
-                });
-            }
+                    });
 
-            const downloadBtn = document.getElementById('download-cert');
-            if(downloadBtn){
-                downloadBtn.addEventListener('click', function(){
-                    window.location.href = '{{ route("consultations.certificate.download") }}';
-                });
-            }
+                    const data = await response.json();
 
-            const revokeBtn = document.getElementById('revoke-cert');
+                    if(response.ok){
+                        msgDiv.textContent = data.message + ' ✅';
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        msgDiv.textContent = data.message || 'Błąd serwera ❌';
+                        console.error(data);
+                    }
+                } catch(err){
+                    msgDiv.textContent = 'Błąd połączenia ❌';
+                    console.error(err);
+                }
+            });
+
+            // Cofanie certyfikatu
+            const revokeBtn = document.getElementById('revokeCert');
             if(revokeBtn){
-                revokeBtn.addEventListener('click', function(){
+                revokeBtn.addEventListener('click', async () => {
                     if(!confirm('Czy na pewno chcesz cofnąć certyfikat?')) return;
 
-                    fetch('{{ route("consultations.certificate.revoke") }}', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': token,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
+                    try {
+                        const response = await fetch("{{ route('consultations.certificate.revoke') }}", {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        const data = await response.json();
+                        if(response.ok && data.success){
+                            msgDiv.textContent = data.message + ' ✅';
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            msgDiv.textContent = data.message || 'Błąd przy cofaniu certyfikatu ❌';
                         }
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            showAlert(data.message, data.success ? 'success' : 'danger');
-                            if(data.success) setTimeout(() => location.reload(), 500);
-                        })
-                        .catch(()=>showAlert('Błąd podczas cofania certyfikatu','danger'));
+                    } catch(err){
+                        msgDiv.textContent = 'Błąd połączenia ❌';
+                        console.error(err);
+                    }
                 });
             }
         });
