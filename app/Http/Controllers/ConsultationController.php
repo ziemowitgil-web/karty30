@@ -39,7 +39,22 @@ class ConsultationController extends Controller
 
         $consultations = $query->get();
 
-        return view('Consultation.index', compact('consultations'));
+        // Pobranie certyfikatu użytkownika
+        $userCertData = null;
+        $userCertPath = storage_path("app/certificates/".Auth::id()."_user_cert.pem");
+
+        if(file_exists($userCertPath)) {
+            $certContent = file_get_contents($userCertPath);
+            $certResource = @openssl_x509_read($certContent);
+            if($certResource !== false) {
+                $parsed = @openssl_x509_parse($certResource);
+                if($parsed !== false) {
+                    $userCertData = $parsed;
+                }
+            }
+        }
+
+        return view('Consultation.index', compact('consultations', 'userCertData', 'userCertPath'));
     }
 
     // =========================================================
