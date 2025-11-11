@@ -34,7 +34,7 @@
                     'OU' => $parsed['subject']['OU'] ?? '-',
                     'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : '-',
                     'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : '-',
-                    'sha1' => sha1(file_get_contents($userCertPath)),
+                    'sha1' => substr(sha1(file_get_contents($userCertPath)),0,10).'...',
                 ];
             }
         @endphp
@@ -49,7 +49,7 @@
                     <li><strong>Jednostka organizacyjna (OU):</strong> {{ $userCertData['OU'] }}</li>
                     <li><strong>Ważny od:</strong> {{ $userCertData['valid_from'] }}</li>
                     <li><strong>Ważny do:</strong> {{ $userCertData['valid_to'] }}</li>
-                    <li><strong>SHA1:</strong> <span class="font-mono">{{ $userCertData['sha1'] }}</span></li>
+                    <li><strong>SHA1 (skrót):</strong> <span class="font-mono">{{ $userCertData['sha1'] }}</span></li>
                 </ul>
                 <p class="text-xs text-gray-500 mt-2">Jeśli nie jesteś pewna, nie podpisuj dokumentów.</p>
             </div>
@@ -64,7 +64,7 @@
             Nowa karta konsultacyjna
         </a>
 
-        {{-- Niepodpisane --}}
+        {{-- Niepodpisane konsultacje --}}
         <h2 class="text-xl font-semibold mt-6 mb-2">Niepodpisane</h2>
         <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -101,7 +101,7 @@
             </table>
         </div>
 
-        {{-- Podpisane --}}
+        {{-- Podpisane konsultacje --}}
         <h2 class="text-xl font-semibold mt-6 mb-2">Podpisane</h2>
         <div class="overflow-x-auto shadow rounded-lg border border-gray-200">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -143,8 +143,100 @@
             </table>
         </div>
 
-        {{-- Modale podpisu i historii pozostają bez zmian --}}
-        @include('Consultation.partials.signModal')
-        @include('Consultation.partials.historyModal')
+        {{-- Modale podpisu i historii --}}
+        <div id="signModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg w-96">
+                <h3 class="text-lg font-semibold mb-4">Podpis konsultacji</h3>
+                <p id="signModalText" class="mb-4"></p>
+                <div class="flex justify-end gap-2">
+                    <button id="signCancel" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Anuluj</button>
+                    <button id="signConfirm" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Podpisz</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="historyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg w-96 max-h-[80vh] overflow-y-auto">
+                <h3 class="text-lg font-semibold mb-4">Historia konsultacji</h3>
+                <ul id="historyList" class="text-sm text-gray-700 space-y-1"></ul>
+                <div class="flex justify-end mt-4">
+                    <button id="historyClose" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Zamknij</button>
+                </div>
+            </div>
+        </div>
     </div>
+
+    {{-- JS --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- Podpis ---
+            const signModal = document.getElementById('signModal');
+            const signModalText = document.getElementById('signModalText');
+            let signId = null;
+
+            document.querySelectorAll('.sign-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    signId = btn.dataset.id;
+                    signModalText.textContent = `Czy chcesz podpisać konsultację #${signId}?`;
+                    signModal.classList.remove('hidden');
+                });
+            });
+
+            document.getElementById('signCancel').addEventListener('click', () => {
+                signId = null;
+                signModal.classList.add('hidden');
+            });
+
+            document.getElementById('signConfirm').addEventListener('click', () => {
+                if(!signId) return;
+                fetch(`/consultations/${signId}/sign`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                }).then(res => res.json())
+                    .then(data => {
+                        if(data.success){
+                            location.reload();
+                        } else {
+                            alert('Błąd podpisu: ' + data.message);
+                        }
+                    });
+            });
+
+            // --- Historia ---
+            const historyModal = document.getElementById('historyModal');
+            const historyList = document.getElementById('historyList');
+
+            document.querySelectorAll('.history-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.id;
+                    historyList.innerHTML = '<li>Ładowanie...</li>';
+                    historyModal.classList.remove('hidden');
+
+                    fetch(`/consultations/${id}/history`, {
+                        headers: { 'Accept': 'application/json' }
+                    }).then(res => res.json())
+                        .then(data => {
+                            if(data.history){
+                                historyList.innerHTML = '';
+                                data.history.forEach(h => {
+                                    const li = document.createElement('li');
+                                    li.textContent = `${h.created_at}: ${h.action}`;
+                                    historyList.appendChild(li);
+                                });
+                            } else {
+                                historyList.innerHTML = '<li>Brak historii</li>';
+                            }
+                        });
+                });
+            });
+
+            document.getElementById('historyClose').addEventListener('click', () => {
+                historyModal.classList.add('hidden');
+                historyList.innerHTML = '';
+            });
+        });
+    </script>
 @endsection
