@@ -42,7 +42,7 @@
                 <a href="{{ route('consultations.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
                 <a href="{{ route('clients.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Klienci</a>
                 <a href="{{ route('raport') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Raporty</a>
-                <a href="{{ route('consultations.certificate.view') }}" class="px-3 py-2 rounded hover:bg-yellow-500 transition focus:outline-none focus:ring-2 focus:ring-yellow-400 text-gray-900 font-semibold">Zarządzanie certyfikatem</a>
+                <a href="{{ route('consultations.certificate.view') }}" class=" rounded-3xl bg-amber-500 px-3 py-2 rounded hover:bg-yellow-500 transition focus:outline-none focus:ring-2 focus:ring-yellow-400 text-gray-900 font-semibold">Zarządzanie certyfikatem</a>
 
                 <!-- Wylogowanie -->
                 <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
