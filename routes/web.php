@@ -1,191 +1,107 @@
-<?php
+{{-- resources/views/layouts/app.blade.php --}}
+<!doctype html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ config('app.name', 'Karty 3.0') }}</title>
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\ClientController;
-use App\Http\Controllers\ConsultationController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\RaportController;
-use App\Http\Controllers\ScheduleController;
-use App\Http\Controllers\ClientBlacklistController;
-use App\Http\Controllers\Auth\LoginController;
-use Laragear\WebAuthn\Http\Controllers\WebAuthnLoginController;
-use App\Http\Controllers\WebAuthn\WebAuthnRegisterController;
-use App\Http\Controllers\AdminServiceController;
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-/*
-|--------------------------------------------------------------------------
-| Strona główna
-|--------------------------------------------------------------------------
-*/
+    <style>
+        a:focus, button:focus {
+            outline: 2px dashed #fff;
+            outline-offset: 2px;
+        }
+        .truncate-title {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-900 flex flex-col min-h-screen">
 
-Route::get('/', function () {
-    return auth()->check() ? redirect('/home') : redirect('/login');
-});
+@auth
+<!-- HEADER -->
+<header class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
 
-/*
-|--------------------------------------------------------------------------
-| Autoryzacja
-|--------------------------------------------------------------------------
-*/
-Auth::routes();
+        <!-- Logo -->
+        <a href="{{ route('home') }}" class="text-2xl font-bold hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white">
+            {{ config('app.name', 'Karty 3.0') }}
+        </a>
 
-/*
-|--------------------------------------------------------------------------
-| Accessibility toggle
-|--------------------------------------------------------------------------
-*/
-Route::post('/toggle-accessible', [HomeController::class, 'toggleAccessible'])
-    ->name('toggle-accessible');
+        <!-- Desktop menu -->
+        <nav class="hidden md:flex items-center space-x-4" role="navigation" aria-label="Główne menu">
+            <a href="{{ route('home') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
+            <a href="{{ route('schedules.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
+            <a href="{{ route('consultations.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
+            <a href="{{ route('clients.index') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Klienci</a>
+            <a href="{{ route('raport') }}" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Raporty</a>
+            <a href="{{ route('consultations.certificate.view') }}" class="px-3 py-2 rounded hover:bg-yellow-500 transition focus:outline-none focus:ring-2 focus:ring-yellow-400 text-gray-900 font-semibold">Zarządzanie certyfikatem</a>
 
-/*
-|--------------------------------------------------------------------------
-| Dashboard
-|--------------------------------------------------------------------------
-*/
-Route::get('/home', [HomeController::class, 'index'])->name('home');
+            <!-- Wylogowanie -->
+            <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="px-3 py-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
+        </nav>
 
-/*
-|--------------------------------------------------------------------------
-| Administrator
-|--------------------------------------------------------------------------
-*/
-Route::get('/log', [AdminServiceController::class, 'log'])->name('logs');
-Route::post('/log/clear', [AdminServiceController::class, 'clearLog'])->name('logs.clear');
-Route::post('/env/update', [AdminServiceController::class, 'updateEnv'])->name('env.update');
+        <!-- Mobile hamburger -->
+        <div class="md:hidden flex items-center">
+            <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="focus:outline-none" aria-label="Otwórz menu mobilne">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </div>
+    </div>
 
-/*
-|--------------------------------------------------------------------------
-| Szybka rezerwacja
-|--------------------------------------------------------------------------
-*/
-Route::get('/s', [ScheduleController::class, 'quickReserve'])->name('quickreservation');
-Route::post('/s', [ScheduleController::class, 'quickReserve'])->name('quickreservationstore');
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="md:hidden hidden bg-gray-800 px-4 py-4 space-y-2" role="menu">
+        <a href="{{ route('home') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Strona główna</a>
+        <a href="{{ route('schedules.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Rezerwacje</a>
+        <a href="{{ route('consultations.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Konsultacje</a>
+        <a href="{{ route('clients.index') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Klienci</a>
+        <a href="{{ route('raport') }}" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Raporty</a>
+        <a href="{{ route('consultations.certificate.view') }}" class="block px-4 py-2 rounded hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-gray-900 font-semibold">Zarządzanie certyfikatem</a>
 
-/*
-|--------------------------------------------------------------------------
-| WebAuthn
-|--------------------------------------------------------------------------
-*/
-Route::get('/webauthn/challenge', [WebAuthnLoginController::class, 'showChallengeForm'])->name('webauthn.challenge');
-Route::post('/webauthn/challenge', [WebAuthnLoginController::class, 'verifyChallenge'])->name('webauthn.verify');
+        <div class="border-t border-gray-700 my-2"></div>
+        <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-mobile').submit();" class="block px-4 py-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white">Wyloguj</a>
+        <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
+    </div>
+</header>
+@endauth
 
-Route::prefix('webauthn/keys')->name('webauthn.keys.')->middleware('auth')->group(function () {
-    Route::get('/', [WebAuthnRegisterController::class, 'index'])->name('index');
-    Route::get('/options', [WebAuthnRegisterController::class, 'options'])->name('options');
-    Route::post('/register', [WebAuthnRegisterController::class, 'register'])->name('register');
-    Route::delete('/{key}', [WebAuthnRegisterController::class, 'destroy'])->name('destroy');
-});
+<!-- Main content -->
+<main class="flex-grow container mx-auto px-4 md:px-6 py-6">
+    @yield('content')
+</main>
 
-/*
-|--------------------------------------------------------------------------
-| Middleware auth
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth'])->group(function () {
+<!-- FOOTER -->
+<footer class="bg-gray-900 text-gray-300 py-8 mt-auto">
+    <div class="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0">
+        <div class="flex flex-col space-y-1 text-center md:text-left">
+            <span class="text-sm text-white">&copy; {{ date('Y') }} {{ config('app.name', 'Karty 3.0') }}</span>
+            <span class="text-xs text-gray-400">Wersja aplikacji: {{ env('APP_VERSION', 'DEV') }}</span>
+        </div>
+        <div class="flex flex-col md:flex-row items-center gap-2 md:gap-4">
+            <div class="px-3 py-1 rounded text-xs font-semibold {{ match(env('APP_ENV', 'local')) {
+                'production' => 'bg-green-600',
+                'local' => 'bg-yellow-500',
+                'staging' => 'bg-orange-500',
+                default => 'bg-gray-500',
+            } }} text-white text-center">
+                Środowisko: {{ strtoupper(env('APP_ENV', 'LOCAL')) }}
+            </div>
+            <div class="text-xs text-gray-400 text-center md:text-left">
+                Serwer: {{ request()->getHost() }}
+            </div>
+        </div>
+    </div>
+</footer>
 
-    // Dashboard
-    Route::get('/dashboard', [HomeController::class, 'index']);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Klienci
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('clients')->name('clients.')->group(function () {
-        Route::get('/', [ClientController::class,'index'])->name('index');
-        Route::get('/create', [ClientController::class,'create'])->name('create');
-        Route::post('/store', [ClientController::class,'store'])->name('store');
-        Route::get('/{client}/details', [ClientController::class, 'details'])->name('details');
-        Route::get('/{client}/print', [ClientController::class, 'printDocuments'])->name('print');
-        Route::delete('/{client}', [ClientController::class, 'destroy'])->name('destroy');
-        Route::get('/export', [ClientController::class, 'exportXls'])->name('export');
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Harmonogram
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('schedules')->name('schedules.')->group(function () {
-        Route::get('/', [ScheduleController::class, 'index'])->name('index');
-        Route::get('/create', [ScheduleController::class, 'create'])->name('create');
-        Route::post('/', [ScheduleController::class, 'store'])->name('store');
-        Route::get('/{schedule}/edit', [ScheduleController::class, 'edit'])->name('edit');
-        Route::patch('/{schedule}', [ScheduleController::class, 'update'])->name('update');
-        Route::delete('/{schedule}', [ScheduleController::class, 'destroy'])->name('destroy');
-        Route::post('/{schedule}/attendance', [ScheduleController::class, 'markAttendance'])->name('markAttendance');
-        Route::post('/{schedule}/cancel', [ScheduleController::class, 'cancel'])->name('cancel');
-        Route::post('/{schedule}/cancelByFeer', [ScheduleController::class, 'cancelByFeer'])->name('cancelByFeer');
-        Route::post('/{schedule}/cancelByClient', [ScheduleController::class, 'cancelByClient'])->name('cancelByClient');
-        Route::get('/calendar', [ScheduleController::class, 'calendar'])->name('calendar');
-
-        // Rescheduling
-        Route::get('/{schedule}/reschedule', [ScheduleController::class, 'rescheduleForm'])->name('rescheduleForm');
-        Route::patch('/{schedule}/reschedule', [ScheduleController::class, 'updateReschedule'])->name('updateReschedule');
-
-        // Blacklista klientów
-        Route::prefix('client-blacklist')->name('client_blacklist.')->group(function () {
-            Route::get('/', [ClientBlacklistController::class, 'index'])->name('index');
-            Route::post('/', [ClientBlacklistController::class, 'store'])->name('store');
-            Route::delete('/{clientBlacklist}', [ClientBlacklistController::class, 'destroy'])->name('destroy');
-        });
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Formularz dokumentu użytkownika
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('user-document')->name('user.document.')->group(function () {
-        Route::get('/', [LoginController::class, 'showDocumentForm'])->name('form');
-        Route::post('/', [LoginController::class, 'storeDocument'])->name('store');
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Konsultacje
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('consultations')->name('consultations.')->group(function () {
-        Route::get('/', [ConsultationController::class, 'index'])->name('index');
-        Route::get('/create', [ConsultationController::class, 'create'])->name('create');
-        Route::post('/', [ConsultationController::class, 'store'])->name('store');
-        Route::delete('/{consultation}', [ConsultationController::class, 'destroy'])->name('destroy');
-
-        // Podpisy i historia
-        Route::post('/{consultation}/sign', [ConsultationController::class, 'signJson'])->name('sign');
-        Route::get('/{consultation}/history-json', [ConsultationController::class, 'historyJson'])->name('history.json');
-        Route::get('/{consultation}/history', [ConsultationController::class, 'history'])->name('history');
-        Route::get('/{consultation}/pdf', [ConsultationController::class, 'downloadPdf'])->name('pdf');
-        Route::get('/{consultation}/xml', [ConsultationController::class, 'xml'])->name('xml');
-        Route::get('/consultations/{consultation}/details', [ConsultationController::class, 'details'])
-            ->name('consultations.details');
-        // Test staging
-        Route::post('/delete-test-data', [ConsultationController::class, 'deleteTestData'])->name('deleteTestData');
-
-        // Certyfikat
-        Route::get('/certificate/json', [ConsultationController::class, 'certificateDetails'])->name('certificate.json');
-        Route::get('/certificate', [ConsultationController::class, 'certificateDetailsView'])->name('certificate.view');
-        Route::post('/certificate/generate', [ConsultationController::class, 'generateCertificate'])->name('certificate.generate');
-        Route::post('/certificate/access', [ConsultationController::class, 'generateCertificate'])->name('certificate.access');
-        Route::post('/certificate/revoke', [ConsultationController::class, 'revokeCertificate'])->name('certificate.revoke');
-        Route::get('/certificate/download', [ConsultationController::class, 'downloadCertificate'])->name('certificate.download');
-
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Raporty
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/raporty', [RaportController::class, 'index'])->name('raport');
-    Route::get('/raports/cancelled', [RaportController::class, 'cancelledSchedulesReport'])->name('raports.cancelled');
-    Route::get('/raports/blacklist', [RaportController::class, 'blacklistReport'])->name('raports.blacklist');
-    Route::get('/raports/consultation/approvedthismonth', [RaportController::class, 'approvedThisMonthReport'])->name('raports.approvedThisMonth');
-    Route::get('/raports/consultation/approvedlastmonth', [RaportController::class, 'approvedLastMonthReport'])->name('raports.approvedLastMonth');
-    Route::get('/raports/consultation/monthlyReportMRPIPS', [RaportController::class, 'monthlyReportMRPIPS'])->name('raports.monthlyReportMRPIPS');
-    Route::get('/raports/consultation/monthlyReportMRPIPS/email', [RaportController::class, 'sendMonthlyReportMRPIPS'])->name('raports.monthlyReportMRPIPS.email');
-
-});
+</body>
+</html>
