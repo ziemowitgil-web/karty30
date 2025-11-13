@@ -46,7 +46,7 @@
         @endif
 
         <div class="text-center mt-6">
-            <a href="{{ route('raports.index') }}"
+            <a href="{{ route('raport') }}"
                class="inline-block bg-gray-700 text-white px-8 py-3 rounded-lg shadow hover:bg-gray-800 transition duration-300 font-medium">
                 Powrót do raportów
             </a>
