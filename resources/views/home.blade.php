@@ -24,13 +24,13 @@
         }
     @endphp
 
-    <div class="container mx-auto px-6 py-8 space-y-6" role="main">
+    <div class="container mx-auto px-6 py-10 space-y-8 bg-gray-50 min-h-screen" role="main">
 
         {{-- ALERT REDIS --}}
         @if($redisStatus !== 'Dostępny')
-            <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl flex justify-between items-center" role="alert">
+            <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl flex justify-between items-center" role="alert" aria-live="assertive">
                 <span><strong>Uwaga:</strong> {{ $redisStatus }} — system może działać wolniej.</span>
-                <button onclick="this.parentElement.remove()" aria-label="Zamknij" class="ml-3 text-red-600 font-bold text-lg">&times;</button>
+                <button onclick="this.parentElement.remove()" aria-label="Zamknij alert" class="ml-3 text-red-600 font-bold text-lg focus:outline-none focus:ring-2 focus:ring-red-400">&times;</button>
             </div>
         @endif
 
@@ -38,7 +38,7 @@
         @foreach (['warning','error','success'] as $msg)
             @if(session($msg))
                 @php $colors = ['warning'=>'yellow','error'=>'red','success'=>'green']; @endphp
-                <div class="p-4 bg-{{ $colors[$msg] }}-50 border border-{{ $colors[$msg] }}-200 text-{{ $colors[$msg] }}-800 rounded-xl">
+                <div class="p-4 bg-{{ $colors[$msg] }}-50 border border-{{ $colors[$msg] }}-200 text-{{ $colors[$msg] }}-800 rounded-xl" role="alert" aria-live="polite">
                     {{ session($msg) }}
                 </div>
             @endif
@@ -46,23 +46,23 @@
 
         {{-- KAFELKI AKCJI --}}
         <section aria-label="Szybkie akcje">
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-6">
                 @php
                     $tiles = [
-                        ['route'=>'consultations.create', 'color'=>'blue', 'icon'=>'fa-stethoscope', 'label'=>'Nowa konsultacja', 'desc'=>'Zarejestruj konsultację dla klienta'],
-                        ['route'=>'schedules.create', 'color'=>'indigo', 'icon'=>'fa-calendar-plus', 'label'=>'Nowa rezerwacja', 'desc'=>'Dodaj nową rezerwację w harmonogramie'],
-                        ['route'=>'clients.index', 'color'=>'green', 'icon'=>'fa-users', 'label'=>'Lista klientów', 'desc'=>'Przeglądaj i zarządzaj klientami'],
-                        ['route'=>'raport', 'color'=>'gray', 'icon'=>'fa-file-alt', 'label'=>'Raporty', 'desc'=>'Generuj raporty systemowe'],
-                        ['route'=>'consultations.certificate.view', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Zarządzaj certyfikatem', 'desc'=>'Twórz i przeglądaj certyfikaty'],
+                        ['route'=>'consultations.create', 'color'=>'blue', 'icon'=>'fa-solid fa-user-doctor', 'label'=>'Nowa konsultacja', 'desc'=>'Zarejestruj konsultację dla klienta'],
+                        ['route'=>'schedules.create', 'color'=>'indigo', 'icon'=>'fa-solid fa-calendar-plus', 'label'=>'Nowa rezerwacja', 'desc'=>'Dodaj nową rezerwację w harmonogramie'],
+                        ['route'=>'clients.index', 'color'=>'green', 'icon'=>'fa-solid fa-users', 'label'=>'Lista klientów', 'desc'=>'Przeglądaj i zarządzaj klientami'],
+                        ['route'=>'raport', 'color'=>'gray', 'icon'=>'fa-solid fa-chart-line', 'label'=>'Raporty', 'desc'=>'Generuj raporty systemowe'],
+                        ['route'=>'consultations.certificate.view', 'color'=>'yellow', 'icon'=>'fa-solid fa-certificate', 'label'=>'Zarządzaj certyfikatem', 'desc'=>'Twórz i przeglądaj certyfikaty'],
                     ];
                 @endphp
 
                 @foreach($tiles as $tile)
                     <a href="{{ route($tile['route']) }}"
-                       class="group bg-white border border-gray-200 hover:bg-{{ $tile['color'] }}-50 hover:border-{{ $tile['color'] }}-300 hover:shadow-lg rounded-2xl p-4 flex flex-col items-start transition duration-200 focus:ring-2 focus:ring-{{ $tile['color'] }}-300 focus:outline-none"
-                       aria-label="{{ $tile['label'] }}">
-                        <div class="bg-{{ $tile['color'] }}-600 text-white rounded-xl p-4 mb-3 shadow-md flex items-center justify-center w-12 h-12">
-                            <i class="fas {{ $tile['icon'] }} text-lg"></i>
+                       class="group bg-white border border-gray-200 rounded-2xl p-6 flex flex-col items-start transition transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-{{ $tile['color'] }}-300"
+                       aria-label="{{ $tile['label'] }} - {{ $tile['desc'] }}">
+                        <div class="bg-gradient-to-r from-{{ $tile['color'] }}-500 to-{{ $tile['color'] }}-700 text-white rounded-xl p-4 mb-4 shadow-md flex items-center justify-center w-14 h-14">
+                            <i class="{{ $tile['icon'] }} text-xl"></i>
                         </div>
                         <div class="space-y-1">
                             <span class="text-gray-900 font-semibold group-hover:text-{{ $tile['color'] }}-700">{{ $tile['label'] }}</span>
@@ -74,7 +74,7 @@
         </section>
 
         {{-- CERTYFIKAT --}}
-        <section class="bg-white rounded-2xl shadow p-5 mt-6 flex flex-col md:flex-row items-start md:items-center space-x-0 md:space-x-4 space-y-4 md:space-y-0" aria-label="Informacje o certyfikacie">
+        <section class="bg-white rounded-2xl shadow-lg p-6 mt-6 flex flex-col md:flex-row items-start md:items-center space-x-0 md:space-x-6 space-y-4 md:space-y-0 hover:bg-yellow-50 transition" aria-label="Informacje o certyfikacie">
             <div class="bg-yellow-100 p-4 rounded-full text-yellow-600 flex-shrink-0">
                 <i class="fas fa-certificate fa-2x"></i>
             </div>
@@ -90,7 +90,7 @@
                         </div>
                     @endif
                     <p class="text-gray-500 text-sm mt-1 italic">
-                        W wersji produkcyjnej do wydania certyfikatu wymagane będzie podanie danych dokumentu potwierdzającego kwalifikacje zawodowe.
+                        W wersji produkcyjnej do wydania certyfikatu wymagane będzie podanie dokumentu potwierdzającego kwalifikacje zawodowe.
                     </p>
                 @else
                     <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg space-y-2">
@@ -119,6 +119,7 @@
 
         {{-- REZERWACJE --}}
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+
             {{-- DZIS --}}
             <div class="bg-white border border-gray-200 rounded-2xl shadow p-5">
                 <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -129,16 +130,16 @@
                 @else
                     <div class="overflow-x-auto">
                         <table class="min-w-full border-collapse text-sm">
-                            <thead class="bg-gray-50 border-b border-gray-200">
+                            <thead class="bg-gray-50 border-b border-gray-200 sticky top-0">
                             <tr>
-                                <th class="text-left px-3 py-2 font-semibold text-gray-700">Godzina</th>
-                                <th class="text-left px-3 py-2 font-semibold text-gray-700">Klient</th>
-                                <th class="text-left px-3 py-2 font-semibold text-gray-700">Status</th>
+                                <th class="text-left px-3 py-2 font-semibold text-gray-700 uppercase">Godzina</th>
+                                <th class="text-left px-3 py-2 font-semibold text-gray-700 uppercase">Klient</th>
+                                <th class="text-left px-3 py-2 font-semibold text-gray-700 uppercase">Status</th>
                             </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-gray-100">
                             @foreach($todaySchedules as $schedule)
-                                <tr class="hover:bg-gray-50 border-b border-gray-100">
+                                <tr class="hover:bg-gray-50">
                                     <td class="px-3 py-2 text-gray-800">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
                                     <td class="px-3 py-2">
@@ -167,17 +168,17 @@
                 @else
                     <div class="overflow-x-auto">
                         <table class="min-w-full border-collapse text-sm">
-                            <thead class="bg-gray-50 border-b border-gray-200">
+                            <thead class="bg-gray-50 border-b border-gray-200 sticky top-0">
                             <tr>
-                                <th class="text-left px-3 py-2 font-semibold text-gray-700">Data</th>
-                                <th class="text-left px-3 py-2 font-semibold text-gray-700">Godzina</th>
-                                <th class="text-left px-3 py-2 font-semibold text-gray-700">Klient</th>
-                                <th class="text-left px-3 py-2 font-semibold text-gray-700">Status</th>
+                                <th class="text-left px-3 py-2 font-semibold text-gray-700 uppercase">Data</th>
+                                <th class="text-left px-3 py-2 font-semibold text-gray-700 uppercase">Godzina</th>
+                                <th class="text-left px-3 py-2 font-semibold text-gray-700 uppercase">Klient</th>
+                                <th class="text-left px-3 py-2 font-semibold text-gray-700 uppercase">Status</th>
                             </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-gray-100">
                             @foreach($weekSchedules as $schedule)
-                                <tr class="hover:bg-gray-50 border-b border-gray-100">
+                                <tr class="hover:bg-gray-50">
                                     <td class="px-3 py-2 text-gray-800">{{ $schedule->start_time->format('d.m.Y') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
