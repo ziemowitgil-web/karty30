@@ -5,9 +5,11 @@
 
         <!-- Nagłówek strony -->
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">Lista klientów</h1>
-            <a href="{{ route('clients.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Dodaj klienta
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fas fa-users text-blue-600"></i> Lista klientów
+            </h1>
+            <a href="{{ route('clients.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-1">
+                <i class="fas fa-plus"></i> Dodaj klienta
             </a>
         </div>
 
@@ -61,8 +63,15 @@
                             $badgeClass = $statusClasses[$client->status] ?? $statusClasses['default'];
                             $badgeLabel = $statusLabels[$client->status] ?? $statusLabels['default'];
 
-                            // Preferowane godziny
-                            $available_hours = $client->available_days ? json_decode($client->available_days) : [];
+                            // Preferowane godziny - bezpieczne json_decode
+                            $available_hours = [];
+                            if ($client->available_days) {
+                                if (is_array($client->available_days)) {
+                                    $available_hours = $client->available_days;
+                                } else {
+                                    $available_hours = json_decode($client->available_days, true) ?? [];
+                                }
+                            }
                         @endphp
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-2">{{ $client->id }}</td>
@@ -96,25 +105,35 @@
                                     <span class="text-gray-400 text-xs">Nie ma CL</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-2 space-x-2">
-                                <a href="{{ route('clients.details', $client->id) }}" class="text-blue-600 hover:underline text-sm font-medium">Szczegóły</a>
-                                <a href="{{ route('clients.print', $client->id) }}" target="_blank" class="text-green-600 hover:underline text-sm font-medium">PDF RODO</a>
+                            <td class="px-4 py-2 flex flex-wrap justify-center gap-1">
+                                <a href="{{ route('clients.details', $client->id) }}" class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm">
+                                    <i class="fas fa-eye"></i> Szczegóły
+                                </a>
+                                <a href="{{ route('clients.print', $client->id) }}" target="_blank" class="text-green-600 hover:text-green-800 flex items-center gap-1 text-sm">
+                                    <i class="fas fa-file-pdf"></i> PDF RODO
+                                </a>
 
                                 @if($blacklisted)
                                     <form action="{{ route('schedules.client_blacklist.destroy', $blacklisted->id) }}" method="POST" class="inline" onsubmit="return confirm('Na pewno chcesz usunąć klienta z czarnej listy?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-gray-700 hover:underline text-sm font-medium">Usuń z CL</button>
+                                        <button type="submit" class="text-gray-700 hover:text-gray-900 flex items-center gap-1 text-sm">
+                                            <i class="fas fa-times-circle"></i> Usuń z CL
+                                        </button>
                                     </form>
                                 @else
-                                    <button type="button" onclick="openBlacklistModal('{{ $client->name }}')" class="text-black hover:underline text-sm font-medium">Dodaj do CL</button>
+                                    <button type="button" onclick="openBlacklistModal('{{ $client->name }}')" class="text-black hover:text-gray-800 flex items-center gap-1 text-sm">
+                                        <i class="fas fa-ban"></i> Dodaj do CL
+                                    </button>
                                 @endif
 
                                 @if($client->status != 'to_settle')
                                     <form action="{{ route('clients.destroy', $client->id) }}" method="POST" class="inline" onsubmit="return confirm('Na pewno chcesz usunąć klienta?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:underline text-sm font-medium">Usuń</button>
+                                        <button type="submit" class="text-red-600 hover:text-red-800 flex items-center gap-1 text-sm">
+                                            <i class="fas fa-trash"></i> Usuń
+                                        </button>
                                     </form>
                                 @endif
                             </td>
@@ -128,7 +147,7 @@
         <!-- Modal dodawania do czarnej listy -->
         <div id="blacklistModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-                <h2 class="text-xl font-bold mb-4">Dodaj klienta do czarnej listy</h2>
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-ban text-red-600"></i> Dodaj klienta do czarnej listy</h2>
                 <form id="blacklistForm" method="POST" action="{{ route('schedules.client_blacklist.store') }}">
                     @csrf
                     <input type="hidden" name="name" id="blacklistName">
@@ -158,5 +177,4 @@
             document.getElementById('blacklistModal').classList.remove('flex');
         }
     </script>
-
 @endsection
