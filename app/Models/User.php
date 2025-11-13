@@ -59,4 +59,23 @@ class User extends Authenticatable implements WebAuthnAuthenticatable
     {
         return !empty($this->webauthn_credential_id);
     }
+
+    /**
+     * Certyfikaty użytkownika
+     */
+    public function certificates()
+    {
+        return $this->hasMany(Certificate::class);
+    }
+
+    /**
+     * Zwraca aktywny certyfikat użytkownika
+     */
+    public function activeCertificate()
+    {
+        return $this->hasOne(Certificate::class)
+            ->where('status', 'active')
+            ->whereDate('valid_to', '>=', now());
+    }
+
 }
