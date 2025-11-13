@@ -2,45 +2,70 @@
 
 @section('content')
     <div class="container mx-auto p-6">
-        <h1 class="text-4xl font-extrabold mb-8 text-center text-gray-800">Raporty</h1>
+        <h1 class="text-4xl font-extrabold mb-12 text-center text-gray-800">Raporty</h1>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            <!-- Raport odwołanych terminów -->
-            <a href="{{ route('raports.cancelled') }}"
-               class="block bg-blue-500 text-white px-6 py-5 rounded-lg shadow hover:bg-blue-600 transition duration-300 text-center font-semibold">
-                Raport odwołanych terminów
-            </a>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            @php
+                $reports = [
+                    [
+                        'title' => 'Raport odwołanych terminów',
+                        'route' => 'raports.cancelled',
+                        'icon'  => '📅',
+                        'gradient' => 'from-blue-400 to-blue-600',
+                    ],
+                    [
+                        'title' => 'Raport konsultacji w tym miesiącu',
+                        'route' => 'raports.approvedThisMonth',
+                        'icon'  => '✅',
+                        'gradient' => 'from-green-400 to-green-600',
+                    ],
+                    [
+                        'title' => 'Raport konsultacji w poprzednim miesiącu',
+                        'route' => 'raports.approvedLastMonth',
+                        'icon'  => '🕒',
+                        'gradient' => 'from-green-300 to-green-500',
+                    ],
+                    [
+                        'title' => 'Raport konsultacji do MRPiPS (PDF)',
+                        'route' => 'raports.monthlyReportMRPIPS',
+                        'icon'  => '📄',
+                        'gradient' => 'from-pink-400 to-pink-600',
+                    ],
+                    [
+                        'title' => 'Czarna lista (CL)',
+                        'route' => 'raports.blacklist',
+                        'icon'  => '⛔',
+                        'gradient' => 'from-red-400 to-red-600',
+                    ],
+                ];
+            @endphp
 
-            <!-- Raport konsultacje w tym miesiącu -->
-            <a href="{{ route('raports.approvedThisMonth') }}"
-               class="block bg-green-600 text-white px-6 py-5 rounded-lg shadow hover:bg-green-700 transition duration-300 text-center font-semibold">
-                Raport konsultacji w tym miesiącu
-            </a>
+            @foreach ($reports as $report)
+                <a href="{{ route($report['route']) }}"
+                   class="relative flex flex-col justify-between p-6 rounded-2xl shadow-2xl bg-gradient-to-r {{ $report['gradient'] }} text-white hover:scale-105 transition-transform duration-300">
 
-            <!-- Raport konsultacje w poprzednim miesiącu -->
-            <a href="{{ route('raports.approvedLastMonth') }}"
-               class="block bg-green-500 text-white px-6 py-5 rounded-lg shadow hover:bg-green-600 transition duration-300 text-center font-semibold">
-                Raport konsultacji w poprzednim miesiącu
-            </a>
+                    <!-- Ikona i tytuł -->
+                    <div class="flex items-center mb-4">
+                        <div class="text-5xl mr-4">{{ $report['icon'] }}</div>
+                        <h2 class="text-xl font-bold">{{ $report['title'] }}</h2>
+                    </div>
 
-            <!-- Raport MRPiPS PDF -->
-            <a href="{{ route('raports.monthlyReportMRPIPS') }}"
-               class="block bg-pink-700 text-white px-6 py-5 rounded-lg shadow hover:bg-pink-800 transition duration-300 text-center font-semibold">
-                Raport konsultacji do MRPiPS (PDF)
-            </a>
+                    <!-- Mini wizualizacja / placeholder -->
+                    <div class="w-full h-16 bg-white/20 rounded-lg flex items-center justify-center text-white/80 text-sm font-medium">
+                        Tutaj mogą być dane / wykres
+                    </div>
 
-
-            <!-- Raport czarnej listy -->
-            <a href="{{ route('raports.blacklist') }}"
-               class="block bg-red-500 text-white px-6 py-5 rounded-lg shadow hover:bg-red-600 transition duration-300 text-center font-semibold">
-                Czarna lista (CL)
-            </a>
+                    <!-- Przycisk lub wskaźnik -->
+                    <div class="mt-4 text-right">
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">Zobacz raport</span>
+                    </div>
+                </a>
+            @endforeach
         </div>
 
-        <!-- Powrót do strony głównej -->
-        <div class="text-center">
+        <div class="text-center mt-12">
             <a href="{{ route('home') }}"
-               class="inline-block bg-gray-500 text-white px-8 py-3 rounded-lg shadow hover:bg-gray-600 transition duration-300 font-medium">
+               class="inline-block bg-gray-700 text-white px-8 py-3 rounded-lg shadow hover:bg-gray-800 transition duration-300 font-medium">
                 Powrót do strony głównej
             </a>
         </div>
