@@ -85,9 +85,7 @@
                             <td class="px-4 py-2 text-center">{{ $client->limit ?? 3 }}</td>
                             <td class="px-4 py-2 text-center">{{ $client->used ?? 0 }}</td>
 
-                                @else
-                                    <span class="text-gray-400 text-xs">Nie podano</span>
-                                @endif
+                                
                             </td>
                             <td class="px-4 py-2 text-center">
                                 @if($blacklisted)
