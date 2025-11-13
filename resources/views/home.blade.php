@@ -1,25 +1,61 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $certDir = storage_path('app/certificates');
+        $certFile = $certDir . '/' . Auth::user()->id . '_user_cert.pem';
+        $certExists = file_exists($certFile);
+
+        $certCN = 'Brak certyfikatu';
+        $certOrg = null;
+        $certValidUntil = null;
+        $certExpiringSoon = false;
+        $certStatus = 'Brak';
+
+        if ($certExists) {
+            $certContent = file_get_contents($certFile);
+            $certInfo = openssl_x509_parse($certContent);
+            $certCN = $certInfo['subject']['CN'] ?? 'Nieznany użytkownik';
+            $certOrg = $certInfo['subject']['O'] ?? 'Brak danych o organizacji';
+            if (isset($certInfo['validTo_time_t'])) {
+                $certValidUntil = date('d.m.Y', $certInfo['validTo_time_t']);
+                $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
+                $certExpiringSoon = $daysLeft <= 10;
+                $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
+            }
+        }
+    @endphp
+
     <div class="space-y-6">
 
-        {{-- ALERT REDIS --}}
-        @if($redisStatus !== 'Dostępny')
-            <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl flex justify-between items-center" role="alert">
-                <span><strong>Uwaga:</strong> {{ $redisStatus }} — system może działać wolniej.</span>
-                <button onclick="this.parentElement.remove()" aria-label="Zamknij" class="ml-3 text-red-600 font-bold text-lg">&times;</button>
-            </div>
-        @endif
-
-        {{-- ALERTY SESJI --}}
-        @foreach (['warning','error','success'] as $msg)
-            @if(session($msg))
-                @php $colors = ['warning'=>'yellow','error'=>'red','success'=>'green']; @endphp
-                <div class="p-4 bg-{{ $colors[$msg] }}-50 border border-{{ $colors[$msg] }}-200 text-{{ $colors[$msg] }}-800 rounded-xl" role="alert">
-                    {{ session($msg) }}
+        {{-- INFO O ZALOGOWANYM UŻYTKOWNIKU --}}
+        <section class="bg-white rounded-2xl shadow p-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4" aria-label="Informacje o użytkowniku">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-100 text-blue-700 rounded-full w-12 h-12 flex items-center justify-center text-xl">
+                    <i class="fas fa-user"></i>
                 </div>
-            @endif
-        @endforeach
+                <div>
+                    <p class="font-semibold text-gray-900">{{ $certCN }}</p>
+                    <p class="text-gray-700 text-sm">Organizacja: {{ $certOrg }}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                @if($certExists)
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                    @if($certStatus === 'Aktywny') bg-green-100 text-green-800
+                    @else bg-red-100 text-red-800 @endif">
+                    <i class="fas fa-certificate mr-1"></i> Certyfikat: {{ $certStatus }}
+                        @if($certStatus === 'Aktywny' && $certValidUntil)
+                            do {{ $certValidUntil }}
+                        @endif
+                </span>
+                @else
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                    <i class="fas fa-ban mr-1"></i> Brak certyfikatu
+                </span>
+                @endif
+            </div>
+        </section>
 
         {{-- SZYBKIE AKCJE --}}
         <section aria-label="Szybkie akcje" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
