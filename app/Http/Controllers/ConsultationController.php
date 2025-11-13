@@ -97,7 +97,6 @@ class ConsultationController extends Controller
         $validated['username'] = Auth::user()->name;
         $validated['user_ip'] = $request->ip();
 
-        // Walidacja klienta (czarna lista i limit godzin)
         if ($validated['status'] !== 'draft' && $validated['client_id'] !== 'SYSTEM') {
             $client = Client::find($validated['client_id']);
             if ($client->blacklisted) {
@@ -139,7 +138,6 @@ class ConsultationController extends Controller
     // =========================================================
     // ===================== PODPIS ===========================
     // =========================================================
-
     public function sign(Consultation $consultation, $jsonMode = false)
     {
         if ($consultation->status !== 'draft') {
@@ -151,8 +149,6 @@ class ConsultationController extends Controller
             activity()->causedBy(Auth::user())->performedOn($consultation)->log('Konsultacja przekazana do podpisu');
 
             $testCertFlag = false;
-
-            // Weryfikacja certyfikatu użytkownika
             $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
             if (!file_exists($certPath)) {
                 $msg = "Brak certyfikatu użytkownika. Nie można podpisać konsultacji.";
@@ -184,7 +180,6 @@ class ConsultationController extends Controller
 
             activity()->causedBy(Auth::user())->performedOn($consultation)->log("Weryfikacja certyfikatu użytkownika POWIODŁA");
 
-            // Dodatkowy krok w przypadku środowiska testowego
             if (app()->environment('staging')) {
                 $testCertFlag = (time() - filemtime($certPath)) <= 6 * 3600;
                 if ($testCertFlag) {
@@ -206,7 +201,6 @@ class ConsultationController extends Controller
                 activity()->causedBy(Auth::user())->performedOn($consultation)->log($step);
             }
 
-            // Tworzenie katalogu na podpisane dokumenty
             $dir = app_path('signed_docs');
             if (!file_exists($dir)) mkdir($dir, 0777, true);
 
@@ -216,7 +210,6 @@ class ConsultationController extends Controller
             $fileName = "consultation_{$consultation->id}_{$clientId}_{$dateStr}_{$randomStr}.xml";
             $filePath = $dir . DIRECTORY_SEPARATOR . $fileName;
 
-            // Dane certyfikatu do XML
             $certCN = $certData['subject']['CN'] ?? '';
             $certEmail = $certData['subject']['emailAddress'] ?? '';
             $certOrg = $certData['subject']['O'] ?? '';
@@ -225,7 +218,6 @@ class ConsultationController extends Controller
             $validTo = isset($certData['validTo_time_t']) ? date('c', $certData['validTo_time_t']) : '';
             $certSha1 = sha1($certContent);
 
-            // Tworzenie XML
             $xmlContent = '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
             $xmlContent .= "<consultation test_certificate=\"" . ($testCertFlag ? 'true' : 'false') . "\">\n";
             $xmlContent .= "  <id>{$consultation->id}</id>\n";
@@ -303,13 +295,15 @@ class ConsultationController extends Controller
         ]);
     }
 
+    // =========================================================
+    // ===================== PDF ===============================
+    // =========================================================
     public function downloadPdf(Consultation $consultation)
     {
         if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
 
         $mpdf = new Mpdf();
 
-        // Odczyt certyfikatu użytkownika
         $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
         $certData = null;
 
@@ -327,7 +321,7 @@ class ConsultationController extends Controller
             ];
         }
 
-        $html = view('Consultation.pdf', compact('consultation', 'certData'))->render();
+        $html = view('pdf.consultation', compact('consultation', 'certData'))->render();
         $mpdf->WriteHTML($html);
 
         return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
@@ -356,73 +350,10 @@ class ConsultationController extends Controller
         return response($xmlContent, 200)->header('Content-Type', 'application/xml');
     }
 
-
     // =========================================================
     // ===================== CERTYFIKAT =======================
     // =========================================================
-    protected function verifyCertificateByEmail($user, &$testCertFlag = false)
-    {
-        $certPath = storage_path("certs/{$user->id}_user_cert.pem");
-        $now = time();
 
-        if (app()->environment('staging')) {
-            $regenCert = true;
-
-            if (file_exists($certPath)) {
-                $modTime = filemtime($certPath);
-                if ($modTime !== false && ($now - $modTime) < 6 * 3600) {
-                    $regenCert = false;
-                }
-            }
-
-            if ($regenCert) {
-                $dn = [
-                    "countryName" => "PL",
-                    "stateOrProvinceName" => "Test",
-                    "localityName" => "Test",
-                    "organizationName" => "Feer Test",
-                    "organizationalUnitName" => "Test",
-                    "commonName" => "Ewelina Test",
-                    "emailAddress" => "ewelina@testy.feer.org.pl"
-                ];
-
-                $privateKey = openssl_pkey_new([
-                    "private_key_type" => OPENSSL_KEYTYPE_RSA,
-                    "private_key_bits" => 2048,
-                ]);
-
-                $csr = openssl_csr_new($dn, $privateKey);
-                $cert = openssl_csr_sign($csr, null, $privateKey, 0.25); // 6 godzin
-                $certPem = '';
-                openssl_x509_export($cert, $certPem);
-                file_put_contents($certPath, $certPem);
-
-                $testCertFlag = true; // oznaczamy, że certyfikat testowy został wygenerowany
-            }
-        }
-
-        if (!file_exists($certPath)) return false;
-
-        $certContent = file_get_contents($certPath);
-        $cert = openssl_x509_read($certContent);
-        if (!$cert) return false;
-
-        $certData = openssl_x509_parse($cert);
-        if (!$certData) return false;
-
-        $validFrom = $certData['validFrom_time_t'] ?? 0;
-        $validTo = $certData['validTo_time_t'] ?? 0;
-        if ($now < $validFrom || $now > $validTo) return false;
-
-        $certEmail = $certData['subject']['emailAddress'] ?? null;
-        if (!$certEmail) return false;
-
-        return strtolower($certEmail) === strtolower($user->email);
-    }
-
-    /**
-     * Pobranie danych certyfikatu (JSON)
-     */
     public function certificateDetails(Request $request)
     {
         $user = Auth::user();
@@ -471,14 +402,6 @@ class ConsultationController extends Controller
         ]);
     }
 
-    /**
-     * Widok certyfikatu
-     */
-    // =========================================================
-// ===================== CERTYFIKAT =======================
-// =========================================================
-
-
     public function certificateDetailsView()
     {
         $user = Auth::user();
@@ -524,7 +447,6 @@ class ConsultationController extends Controller
         $certPath = $certDir . "/{$user->id}_user_cert.pem";
         $keyPath  = $certDir . "/{$user->id}_user_key.pem";
 
-        // Utwórz katalog, jeśli nie istnieje
         if (!file_exists($certDir)) {
             mkdir($certDir, 0755, true);
         }
@@ -541,23 +463,17 @@ class ConsultationController extends Controller
             "emailAddress" => $user->email
         ];
 
-        // Generowanie klucza prywatnego
         $privkey = openssl_pkey_new([
             "private_key_bits" => 2048,
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
         ]);
 
-        // CSR i certyfikat self-signed ważny 180 dni
         $csr = openssl_csr_new($dn, $privkey);
         $cert = openssl_csr_sign($csr, null, $privkey, 180);
 
-        // Eksport certyfikatu
         openssl_x509_export($cert, $certOut);
-
-        // Eksport klucza prywatnego z hasłem
         openssl_pkey_export($privkey, $keyOut, $password);
 
-        // Zapis do plików
         file_put_contents($certPath, $certOut);
         file_put_contents($keyPath, $keyOut);
 
@@ -566,6 +482,7 @@ class ConsultationController extends Controller
             'message' => 'Certyfikat X.509 został wygenerowany.'
         ]);
     }
+
     public function downloadCertificate()
     {
         $user = auth()->user();
@@ -601,6 +518,4 @@ class ConsultationController extends Controller
             'message' => 'Certyfikat został cofnięty i dodany do CRL.'
         ]);
     }
-
-
 }
