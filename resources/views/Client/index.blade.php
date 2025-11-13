@@ -36,7 +36,6 @@
                         <th class="px-4 py-2 text-center font-semibold">Status</th>
                         <th class="px-4 py-2 text-center font-semibold">Limit</th>
                         <th class="px-4 py-2 text-center font-semibold">Wykorzystane</th>
-                        <th class="px-4 py-2 text-center font-semibold">Preferowane godziny</th>
                         <th class="px-4 py-2 text-center font-semibold">Czarna lista</th>
                         <th class="px-4 py-2 text-center font-semibold">Akcje</th>
                     </tr>
@@ -85,13 +84,7 @@
                             </td>
                             <td class="px-4 py-2 text-center">{{ $client->limit ?? 3 }}</td>
                             <td class="px-4 py-2 text-center">{{ $client->used ?? 0 }}</td>
-                            <td class="px-4 py-2 text-center">
-                                @if(!empty($available_hours))
-                                    @foreach($available_hours as $hour)
-                                        <span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">
-                                        {{ $hour }}
-                                    </span>
-                                    @endforeach
+
                                 @else
                                     <span class="text-gray-400 text-xs">Nie podano</span>
                                 @endif
