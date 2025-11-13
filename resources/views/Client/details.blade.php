@@ -84,18 +84,7 @@
                             </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($client->activities as $activity)
-                                <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-4 py-2">{{ $activity->created_at->format('d.m.Y H:i') }}</td>
-                                    <td class="px-4 py-2">{{ $activity->causer?->name ?? 'System' }}</td>
-                                    <td class="px-4 py-2">{{ ucfirst($activity->description) }}</td>
-                                    <td class="px-4 py-2">
-                                        @if(!empty($activity->properties['attributes']))
-                                            @foreach($activity->properties['attributes'] as $key => $value)
-                                                <div><strong>{{ $key }}:</strong> {{ $value }}</div>
-                                            @endforeach
-                                        @endif
-                                    </td>
+
                                 </tr>
                             @endforeach
                             </tbody>

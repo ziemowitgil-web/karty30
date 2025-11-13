@@ -85,7 +85,7 @@
                             <td class="px-4 py-2 text-center">{{ $client->limit ?? 3 }}</td>
                             <td class="px-4 py-2 text-center">{{ $client->used ?? 0 }}</td>
 
-                                
+
                             </td>
                             <td class="px-4 py-2 text-center">
                                 @if($blacklisted)
