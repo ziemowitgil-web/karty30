@@ -4,7 +4,7 @@
     <div class="min-h-screen flex flex-col bg-gray-100">
 
         <!-- 🔹 Główna sekcja logowania -->
-        <div class="flex flex-1 items-center justify-center px-4">
+        <div class="flex flex-1 items-center justify-center px-4 py-10">
             <div class="bg-white shadow-lg rounded-lg w-full max-w-lg border border-gray-200 overflow-hidden">
 
                 <!-- 🔹 Nagłówek -->
@@ -48,15 +48,7 @@
                         <div class="flex-grow border-t border-gray-300"></div>
                     </div>
 
-                    <!-- 🔹 Przypomnienie RODO dla pracownika -->
-                    <div class="text-center text-gray-500 text-xs px-4 mb-6">
-                        <strong>Uwaga:</strong> Logując się do systemu, <strong>przetwarzasz dane osobowe innych osób</strong> w ramach swojej pracy.
-                        Pamiętaj, aby przestrzegać zasad RODO i obowiązujących procedur wewnętrznych.
-                        <br>
-                        <a href="#" class="text-blue-700 hover:underline font-medium">Pełna polityka ochrony danych (RODO)</a>
-                    </div>
-
-                    <!-- 🔸 Formularz logowania -->
+                    <!-- 🔸 Formularz logowania e-mail/hasło -->
                     <form method="POST" action="{{ route('login') }}" class="space-y-5">
                         @csrf
 
@@ -96,6 +88,23 @@
                         </button>
                     </form>
 
+                    <!-- 🔸 Linki dodatkowe -->
+                    <div class="text-center mt-6 space-y-2 text-sm">
+                        @if (Route::has('password.request'))
+                            <div>
+                                <a href="{{ route('password.request') }}" class="text-blue-700 hover:underline font-medium">
+                                    Nie pamiętasz hasła?
+                                </a>
+                            </div>
+                        @endif
+                        <div>
+                            <span class="text-gray-500">Pierwsze logowanie? </span>
+                            <a href="{{ route('password.request') }}" class="text-blue-700 hover:underline font-medium">
+                                Nadaj hasło i aktywuj konto
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Separator -->
                     <div class="flex items-center my-6">
                         <div class="flex-grow border-t border-gray-300"></div>
@@ -114,14 +123,13 @@
                         Logowanie kluczem sprzętowym
                     </button>
 
-                    <!-- Reset hasła -->
-                    @if (Route::has('password.request'))
-                        <div class="text-center mt-6">
-                            <a href="{{ route('password.request') }}" class="text-blue-700 hover:underline text-sm font-medium">
-                                Nie pamiętasz hasła?
-                            </a>
-                        </div>
-                    @endif
+                    <!-- 🔹 RODO -->
+                    <div class="text-center text-gray-500 text-xs px-4 mt-6">
+                        <strong>Uwaga:</strong> Logując się do systemu, <strong>przetwarzasz dane osobowe innych osób</strong> w ramach swojej pracy.
+                        Pamiętaj, aby przestrzegać zasad RODO i obowiązujących procedur wewnętrznych.
+                        <br>
+                        <a href="#" class="text-blue-700 hover:underline font-medium">Pełna polityka ochrony danych (RODO)</a>
+                    </div>
 
                 </div>
             </div>
