@@ -49,22 +49,25 @@
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 @php
                     $tiles = [
-                        ['route'=>'consultations.create', 'color'=>'blue', 'icon'=>'fa-stethoscope', 'label'=>'Nowa konsultacja'],
-                        ['route'=>'schedules.create', 'color'=>'indigo', 'icon'=>'fa-calendar-plus', 'label'=>'Nowa rezerwacja'],
-                        ['route'=>'clients.index', 'color'=>'green', 'icon'=>'fa-users', 'label'=>'Lista klientów'],
-                        ['route'=>'raport', 'color'=>'gray', 'icon'=>'fa-file-alt', 'label'=>'Raporty'],
-                        ['route'=>'consultations.certificate.view', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Zarządzaj certyfikatem'],
+                        ['route'=>'consultations.create', 'color'=>'blue', 'icon'=>'fa-stethoscope', 'label'=>'Nowa konsultacja', 'desc'=>'Zarejestruj konsultację dla klienta'],
+                        ['route'=>'schedules.create', 'color'=>'indigo', 'icon'=>'fa-calendar-plus', 'label'=>'Nowa rezerwacja', 'desc'=>'Dodaj nową rezerwację w harmonogramie'],
+                        ['route'=>'clients.index', 'color'=>'green', 'icon'=>'fa-users', 'label'=>'Lista klientów', 'desc'=>'Przeglądaj i zarządzaj klientami'],
+                        ['route'=>'raport', 'color'=>'gray', 'icon'=>'fa-file-alt', 'label'=>'Raporty', 'desc'=>'Generuj raporty systemowe'],
+                        ['route'=>'consultations.certificate.view', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Zarządzaj certyfikatem', 'desc'=>'Twórz i przeglądaj certyfikaty'],
                     ];
                 @endphp
 
                 @foreach($tiles as $tile)
                     <a href="{{ route($tile['route']) }}"
-                       class="group bg-gradient-to-br from-{{ $tile['color'] }}-50 to-white border border-{{ $tile['color'] }}-200 hover:shadow-lg rounded-2xl p-4 flex flex-col items-center transition focus:ring-2 focus:ring-{{ $tile['color'] }}-300 focus:outline-none"
+                       class="group bg-white border border-gray-200 hover:bg-{{ $tile['color'] }}-50 hover:border-{{ $tile['color'] }}-300 hover:shadow-lg rounded-2xl p-4 flex flex-col items-start transition duration-200 focus:ring-2 focus:ring-{{ $tile['color'] }}-300 focus:outline-none"
                        aria-label="{{ $tile['label'] }}">
-                        <div class="bg-{{ $tile['color'] }}-600 text-white rounded-full p-3 mb-2 shadow-sm">
-                            <i class="fas {{ $tile['icon'] }}"></i>
+                        <div class="bg-{{ $tile['color'] }}-600 text-white rounded-xl p-4 mb-3 shadow-md flex items-center justify-center w-12 h-12">
+                            <i class="fas {{ $tile['icon'] }} text-lg"></i>
                         </div>
-                        <span class="text-gray-800 font-semibold text-sm group-hover:text-{{ $tile['color'] }}-700">{{ $tile['label'] }}</span>
+                        <div class="space-y-1">
+                            <span class="text-gray-900 font-semibold group-hover:text-{{ $tile['color'] }}-700">{{ $tile['label'] }}</span>
+                            <p class="text-gray-500 text-xs">{{ $tile['desc'] }}</p>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -86,6 +89,9 @@
                             Twój certyfikat wkrótce wygaśnie. Skontaktuj się z administratorem w celu odnowienia.
                         </div>
                     @endif
+                    <p class="text-gray-500 text-sm mt-1 italic">
+                        W wersji produkcyjnej do wydania certyfikatu wymagane będzie podanie danych dokumentu potwierdzającego kwalifikacje zawodowe.
+                    </p>
                 @else
                     <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg space-y-2">
                         <p class="font-semibold text-lg flex items-center gap-2">
@@ -102,6 +108,10 @@
                             <p>Ziemowit Gil — <a href="mailto:ziemowit.gil@feer.org.pl" class="text-blue-600 hover:underline">ziemowit.gil@feer.org.pl</a></p>
                             <p>lub <a href="mailto:certyfikaty@edukacja.cloud" class="text-blue-600 hover:underline">certyfikaty@edukacja.cloud</a></p>
                         </div>
+
+                        <p class="text-gray-500 text-sm mt-1 italic">
+                            W wersji produkcyjnej wymagane będzie podanie dokumentu potwierdzającego posiadanie kwalifikacji zawodowych.
+                        </p>
                     </div>
                 @endif
             </div>
@@ -109,7 +119,6 @@
 
         {{-- REZERWACJE --}}
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-
             {{-- DZIS --}}
             <div class="bg-white border border-gray-200 rounded-2xl shadow p-5">
                 <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
