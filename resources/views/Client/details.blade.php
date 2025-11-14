@@ -86,7 +86,6 @@
                             <tbody class="bg-white divide-y divide-gray-200">
 
                                 </tr>
-                            @endforeach
                             </tbody>
                         </table>
                     </div>
