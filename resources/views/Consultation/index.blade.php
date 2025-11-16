@@ -101,7 +101,6 @@
 
         {{-- Paginacja --}}
         <div class="mt-4">
-            {{ $consultations->withQueryString()->links() }}
         </div>
     </div>
 @endsection
