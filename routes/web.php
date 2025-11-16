@@ -80,6 +80,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::get('/users/create', [AdminServiceController::class, 'createUser'])->name('users.create');
     Route::post('/users/store', [AdminServiceController::class, 'storeUser'])->name('users.store');
 
+    // Formularz certyfikatu serwera
+    Route::get('//-create', [AdminServiceController::class, 'showCertificateForm'])->name('certificate.form');
+
+// Generowanie certyfikatu
+    Route::post('/certificate/generate', [AdminServiceController::class, 'generateServerCertificate'])->name('certificate.generate');
 
 });
 

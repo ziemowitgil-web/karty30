@@ -194,4 +194,61 @@ class AdminServiceController extends Controller
 
         return redirect()->route('admin.users.list')->with('success', 'Użytkownik został dodany i otrzymał maila z hasłem.');
     }
+
+    /**
+     * Generuje certyfikat X.509 serwera i zapisuje klucz prywatny i certyfikat.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function generateServerCertificate(Request $request)
+    {
+        $request->validate([
+            'common_name' => 'required|string|max:255',
+            'organization' => 'nullable|string|max:255',
+            'country' => 'nullable|string|size:2',
+        ]);
+
+        $dn = [
+            "commonName" => $request->common_name,
+            "organizationName" => $request->organization ?? 'MyOrganization',
+            "countryName" => $request->country ?? 'PL',
+        ];
+
+        // Generowanie klucza prywatnego
+        $privateKey = openssl_pkey_new([
+            "private_key_bits" => 2048,
+            "private_key_type" => OPENSSL_KEYTYPE_RSA,
+        ]);
+
+        if (!$privateKey) {
+            return back()->with('error', 'Nie udało się wygenerować klucza prywatnego.');
+        }
+
+        // Generowanie certyfikatu (ważny przez 365 dni)
+        $csr = openssl_csr_new($dn, $privateKey);
+        $x509 = openssl_csr_sign($csr, null, $privateKey, 365);
+
+        if (!$x509) {
+            return back()->with('error', 'Nie udało się wygenerować certyfikatu X.509.');
+        }
+
+        // Tworzenie katalogu, jeśli nie istnieje
+        $certPath = storage_path('app/certs');
+        if (!file_exists($certPath)) {
+            mkdir($certPath, 0755, true);
+        }
+
+        $privateKeyPath = $certPath . '/server.key';
+        $certPathFile = $certPath . '/server.crt';
+
+        // Zapis klucza prywatnego
+        openssl_pkey_export_to_file($privateKey, $privateKeyPath);
+
+        // Zapis certyfikatu
+        openssl_x509_export_to_file($x509, $certPathFile);
+
+        return back()->with('success', "Certyfikat X.509 został wygenerowany.\nPlik certyfikatu: {$certPathFile}\nPlik klucza: {$privateKeyPath}");
+    }
+
 }
