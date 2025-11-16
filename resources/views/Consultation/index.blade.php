@@ -81,7 +81,6 @@
                         <td class="px-4 py-2 capitalize">{{ $c->mode }}</td>
                         <td class="px-4 py-2 flex gap-2">
                             {{-- Podgląd szczegółów --}}
-                            <a href="{{ route('consultations.details', $c) }}" class="text-blue-600 hover:underline">Podgląd</a>
                             {{-- Podpis jeśli nie podpisano --}}
                             @if(!$c->signed)
                                 <form action="{{ route('consultations.sign', $c) }}" method="POST" class="inline">
