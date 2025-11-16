@@ -5,7 +5,11 @@
         <h1 class="text-3xl font-bold mb-6 text-gray-900">Lista konsultacji</h1>
 
         {{-- Alerty --}}
-        <div id="formAlert" class="sr-only text-green-700 bg-green-100 p-3 mb-4 rounded" role="alert" aria-live="polite"></div>
+        @if(session('success'))
+            <div class="text-green-700 bg-green-100 p-3 mb-4 rounded" role="alert" aria-live="polite">
+                {{ session('success') }}
+            </div>
+        @endif
 
         {{-- Filtrowanie --}}
         <form id="filterForm" method="GET" class="mb-6 flex flex-wrap gap-4 items-end">
@@ -14,7 +18,9 @@
                 <select id="client_filter" name="client_id" class="w-full border rounded p-2">
                     <option value="">— Wszyscy —</option>
                     @foreach($clients as $client)
-                        <option value="{{ $client->id }}" {{ request('client_id')==$client->id?'selected':'' }}>{{ $client->name }}</option>
+                        <option value="{{ $client->id }}" {{ request('client_id')==$client->id?'selected':'' }}>
+                            {{ $client->name }}
+                        </option>
                     @endforeach
                 </select>
             </div>
@@ -39,8 +45,9 @@
                 </select>
             </div>
 
-            <div>
+            <div class="flex gap-2">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Filtruj</button>
+                <a href="{{ route('consultations.index') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">Reset</a>
             </div>
         </form>
 
@@ -57,19 +64,20 @@
                     <th class="px-4 py-2 border-b text-left">Działania</th>
                 </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-gray-200">
                 @forelse($consultations as $c)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-2 border-b">{{ $c->id }}</td>
-                        <td class="px-4 py-2 border-b">{{ $c->client->name ?? 'SYSTEM' }}</td>
-                        <td class="px-4 py-2 border-b">{{ \Carbon\Carbon::parse($c->consultation_date)->format('d.m.Y H:i') }}</td>
-                        <td class="px-4 py-2 border-b">{{ gmdate("H:i", $c->duration_minutes*60) }}</td>
-                        <td class="px-4 py-2 border-b capitalize">{{ $c->mode }}</td>
-                        <td class="px-4 py-2 border-b flex gap-2">
-                            <a href="{{ route('consultations.show',$c) }}" class="text-blue-600 hover:underline">Podgląd</a>
-                            <a href="{{ route('consultations.edit',$c) }}" class="text-yellow-600 hover:underline">Edytuj</a>
+                        <td class="px-4 py-2">{{ $c->id }}</td>
+                        <td class="px-4 py-2">{{ $c->client->name ?? 'SYSTEM' }}</td>
+                        <td class="px-4 py-2">{{ \Carbon\Carbon::parse($c->consultation_date)->format('d.m.Y H:i') }}</td>
+                        <td class="px-4 py-2">
+                            {{ floor($c->duration_minutes/60) }}h {{ $c->duration_minutes % 60 }}m
+                        </td>
+                        <td class="px-4 py-2 capitalize">{{ $c->mode }}</td>
+                        <td class="px-4 py-2 flex gap-2">
+                            <a href="{{ route('consultations.details', $c) }}" class="text-blue-600 hover:underline">Podgląd</a>
                             @if(!$c->signed)
-                                <form action="{{ route('consultations.sign',$c) }}" method="POST" class="inline">
+                                <form action="{{ route('consultations.sign', $c) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit" class="text-green-600 hover:underline">Podpisz</button>
                                 </form>
