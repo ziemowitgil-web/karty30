@@ -4,6 +4,12 @@
     <div class="container mx-auto p-6 max-w-4xl">
         <h1 id="pageTitle" class="text-3xl font-bold mb-6 text-gray-900">Dodaj konsultację – Kreator</h1>
 
+        @if(session('success'))
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6" role="alert">
+                {{ session('success') }}
+            </div>
+        @endif
+
         <div id="ariaMessage" class="sr-only" aria-live="polite"></div>
 
         <form id="consultationWizard" action="{{ route('consultations.store') }}" method="POST"
@@ -95,6 +101,8 @@
                     <p id="durationError" class="text-red-600 text-sm mt-1 sr-only" aria-live="polite"></p>
                 </div>
 
+                <p id="availabilityError" class="text-red-600 text-sm mt-1 sr-only" aria-live="polite"></p>
+
                 <div class="flex justify-between mt-6">
                     <button type="button" class="prevBtn bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500 focus:ring-2 focus:ring-gray-300">Wstecz</button>
                     <button type="button" class="nextBtn bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 focus:ring-2 focus:ring-blue-300">Dalej</button>
@@ -143,6 +151,8 @@
             const durationHours = document.getElementById('duration_hours');
             const durationMinutesHidden = document.getElementById('duration_minutes_hidden');
 
+            const availabilityError = document.getElementById('availabilityError');
+
             const modeBtns = document.querySelectorAll('.modeBtn');
 
             function showStep(index) {
@@ -152,8 +162,8 @@
                 currentStep = index;
             }
 
-            nextBtns.forEach(btn => btn.addEventListener('click', () => {
-                if(validateStep(currentStep)) showStep(currentStep+1);
+            nextBtns.forEach(btn => btn.addEventListener('click', async () => {
+                if(await validateStep(currentStep)) showStep(currentStep+1);
             }));
 
             prevBtns.forEach(btn => btn.addEventListener('click', () => showStep(currentStep-1)));
@@ -199,7 +209,7 @@
             });
 
             // Walidacja kroków
-            function validateStep(step) {
+            async function validateStep(step) {
                 let valid = true;
 
                 // Krok 2: klient
@@ -209,34 +219,57 @@
                         err.textContent = 'Wybierz klienta.';
                         err.classList.remove('sr-only');
                         valid = false;
-                    } else {
-                        document.getElementById('clientError').classList.add('sr-only');
-                    }
+                    } else document.getElementById('clientError').classList.add('sr-only');
                 }
 
-                // Krok 3: data, czas, czas trwania
+                // Krok 3: data, czas, czas trwania i dostępność
                 if(step === 2){
+                    let hasError = false;
+
                     if(!consultationDate.value){
-                        const err = document.getElementById('dateError');
-                        err.textContent = 'Podaj datę konsultacji.';
-                        err.classList.remove('sr-only');
-                        valid = false;
+                        document.getElementById('dateError').textContent = 'Podaj datę konsultacji.';
+                        document.getElementById('dateError').classList.remove('sr-only');
+                        hasError = true;
                     } else document.getElementById('dateError').classList.add('sr-only');
 
                     if(!consultationTime.value){
-                        const err = document.getElementById('timeError');
-                        err.textContent = 'Podaj godzinę rozpoczęcia.';
-                        err.classList.remove('sr-only');
-                        valid = false;
+                        document.getElementById('timeError').textContent = 'Podaj godzinę rozpoczęcia.';
+                        document.getElementById('timeError').classList.remove('sr-only');
+                        hasError = true;
                     } else document.getElementById('timeError').classList.add('sr-only');
 
                     const hours = parseFloat(durationHours.value);
                     if(!hours || hours <= 0){
-                        const err = document.getElementById('durationError');
-                        err.textContent = 'Podaj poprawny czas trwania.';
-                        err.classList.remove('sr-only');
-                        valid = false;
+                        document.getElementById('durationError').textContent = 'Podaj poprawny czas trwania.';
+                        document.getElementById('durationError').classList.remove('sr-only');
+                        hasError = true;
                     } else document.getElementById('durationError').classList.add('sr-only');
+
+                    if(!hasError){
+                        // Sprawdzenie dostępności klienta przez AJAX
+                        const response = await fetch("{{ route('schedules.checkAvailability') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                            },
+                            body: JSON.stringify({
+                                client_id: clientSelect.value,
+                                start_time: consultationDate.value + ' ' + consultationTime.value,
+                                duration_minutes: Math.round(hours*60)
+                            })
+                        });
+                        const data = await response.json();
+                        if(!data.available){
+                            availabilityError.textContent = 'Klient ma już termin w tym czasie.';
+                            availabilityError.classList.remove('sr-only');
+                            valid = false;
+                        } else {
+                            availabilityError.classList.add('sr-only');
+                        }
+                    }
+
+                    valid = !hasError && valid;
                 }
 
                 return valid;
