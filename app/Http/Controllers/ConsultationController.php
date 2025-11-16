@@ -78,7 +78,7 @@ class ConsultationController extends Controller
             'xmlData' => $xmlData,
         ];
 
-        return view('consultations.details', $data);
+        return view('Consultations.details', $data);
     }
 
 
