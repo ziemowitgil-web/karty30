@@ -43,6 +43,46 @@ class ConsultationController extends Controller
         return view('Consultation.index', compact('consultations','clients'));
     }
 
+    // =============== SCZEGÓŁY =========================
+    public function details(Consultation $consultation)
+    {
+        // Ładujemy relacje
+        $consultation->load('client', 'user');
+
+        // Dane XML — opcjonalne, jeśli istnieje plik
+        $xmlData = null;
+        $xmlPath = storage_path("app/consultations/{$consultation->id}.xml");
+        if (file_exists($xmlPath)) {
+            try {
+                $xmlContent = file_get_contents($xmlPath);
+                $xmlData = simplexml_load_string($xmlContent); // SimpleXMLElement
+            } catch (\Exception $e) {
+                $xmlData = null;
+            }
+        }
+
+        // Dane do widoku — wszystko z DB
+        $data = [
+            'id' => $consultation->id,
+            'client_name' => $consultation->client->name ?? 'SYSTEM',
+            'user_name' => $consultation->user->name ?? '-',
+            'consultation_datetime' => $consultation->consultation_datetime,
+            'duration_minutes' => $consultation->duration_minutes,
+            'mode' => $consultation->mode,
+            'next_action' => $consultation->next_action,
+            'description' => $consultation->description,
+            'status' => $consultation->status,
+            'sha1sum' => $consultation->sha1sum,
+            'approved_by_name' => $consultation->approved_by_name,
+            'approved_at' => $consultation->updated_at,
+            'xmlData' => $xmlData,
+        ];
+
+        return view('consultations.details', $data);
+    }
+
+
+
     // ================= FORMULARZ ========================
     public function create()
     {
