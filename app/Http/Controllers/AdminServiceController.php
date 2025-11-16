@@ -10,6 +10,8 @@ class AdminServiceController extends Controller
 {
     /**
      * Panel główny administratora
+     *
+     * @return \Illuminate\View\View
      */
     public function dashboard()
     {
@@ -21,6 +23,8 @@ class AdminServiceController extends Controller
 
     /**
      * Logi aktywności
+     *
+     * @return \Illuminate\View\View
      */
     public function log()
     {
@@ -30,6 +34,8 @@ class AdminServiceController extends Controller
 
     /**
      * Wyczyść wszystkie logi
+     *
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function clearLog()
     {
@@ -39,6 +45,9 @@ class AdminServiceController extends Controller
 
     /**
      * Aktualizacja zmiennej .env
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function updateEnv(Request $request)
     {
@@ -74,6 +83,9 @@ class AdminServiceController extends Controller
 
     /**
      * Lista użytkowników z wyszukiwaniem i paginacją
+     *
+     * @param Request $request
+     * @return \Illuminate\View\View
      */
     public function UserList(Request $request)
     {
@@ -95,6 +107,9 @@ class AdminServiceController extends Controller
 
     /**
      * Formularz edycji użytkownika
+     *
+     * @param User $user
+     * @return \Illuminate\View\View
      */
     public function editUser(User $user)
     {
@@ -103,6 +118,10 @@ class AdminServiceController extends Controller
 
     /**
      * Aktualizacja użytkownika
+     *
+     * @param Request $request
+     * @param User $user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function updateUser(Request $request, User $user)
     {
@@ -123,10 +142,56 @@ class AdminServiceController extends Controller
 
     /**
      * Usuwanie użytkownika
+     *
+     * @param User $user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroyUser(User $user)
     {
         $user->delete();
         return redirect()->route('admin.users.list')->with('success', 'Użytkownik został usunięty.');
+    }
+
+    /**
+     * Formularz dodawania nowego użytkownika
+     *
+     * @return \Illuminate\View\View
+     */
+    public function createUser()
+    {
+        return view('AdminService.UserMgmt.create');
+    }
+
+    /**
+     * Zapis nowego użytkownika i wysyłka maila z hasłem
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'document_number' => 'nullable|string|max:255',
+            'document_type' => 'nullable|string|max:255',
+            'document_issuer' => 'nullable|string|max:255',
+        ]);
+
+        $password = \Str::random(12);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => $password,
+            'document_number' => $request->document_number,
+            'document_type' => $request->document_type,
+            'document_issuer' => $request->document_issuer,
+        ]);
+
+        // Wyślij maila z hasłem
+        \Mail::to($user->email)->send(new \App\Mail\UserCreated($user, $password));
+
+        return redirect()->route('admin.users.list')->with('success', 'Użytkownik został dodany i otrzymał maila z hasłem.');
     }
 }

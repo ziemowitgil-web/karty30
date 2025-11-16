@@ -76,6 +76,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     // Aktualizacja .env
     Route::post('/env/update', [AdminServiceController::class, 'updateEnv'])->name('env.update');
 
+    // Dodawanie użytkownika
+    Route::get('/users/create', [AdminServiceController::class, 'createUser'])->name('users.create');
+    Route::post('/users/store', [AdminServiceController::class, 'storeUser'])->name('users.store');
+
 
 });
 
