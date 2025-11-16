@@ -136,7 +136,7 @@ class ConsultationController extends Controller
     {
         if ($consultation->status !== 'draft') {
             $msg = "Tylko wersje robocze można podpisać.";
-            return $jsonMode ? $msg : redirect()->back()->with('error', $msg);
+            return $jsonMode ? response()->json(['error' => $msg]) : redirect()->back()->with('error', $msg);
         }
 
         try {
@@ -146,12 +146,13 @@ class ConsultationController extends Controller
             if (!$userCertData || !$serverCertData) {
                 $msg = "Brak certyfikatu użytkownika lub serwera. Nie można podpisać konsultacji.";
                 activity()->causedBy(Auth::user())->performedOn($consultation)->log($msg);
-                return $jsonMode ? $msg : redirect()->back()->with('error', $msg);
+                return $jsonMode ? response()->json(['error' => $msg]) : redirect()->back()->with('error', $msg);
             }
 
             $this->validateUserCertificate($userCertData, Auth::user()->email);
 
-            $testCertFlag = app()->environment('staging') && (time() - filemtime(storage_path("app/certificates/".Auth::user()->id."_user_cert.pem")) < 6*3600);
+            $testCertFlag = app()->environment('staging')
+                && (time() - filemtime(storage_path("app/certificates/".Auth::user()->id."_user_cert.pem")) < 6*3600);
 
             $xmlContent = $this->generateConsultationXml($consultation, $userCertData, $serverCertData, $testCertFlag);
             $filePath = $this->saveXmlFile($consultation, $xmlContent);
@@ -167,13 +168,23 @@ class ConsultationController extends Controller
                 ->log("Konsultacja podpisana (SHA1: {$sha1})");
 
             $msg = "Konsultacja ID {$consultation->id} podpisana. SHA1: {$sha1}";
-            return $jsonMode ? $msg : redirect()->back()->with('success', $msg);
+            return $jsonMode ? response()->json(['success' => $msg]) : redirect()->back()->with('success', $msg);
 
         } catch (\Exception $e) {
             Log::error("Błąd podpisu konsultacji {$consultation->id}: {$e->getMessage()}");
-            return $jsonMode ? $e->getMessage() : redirect()->back()->with('error', 'Błąd podpisu: '.$e->getMessage());
+            $errMsg = 'Błąd podpisu: '.$e->getMessage();
+            return $jsonMode ? response()->json(['error' => $errMsg]) : redirect()->back()->with('error', $errMsg);
         }
     }
+
+    /**
+     * Alias do wywołania podpisu w trybie JSON
+     */
+    public function signJson(Consultation $consultation)
+    {
+        return $this->sign($consultation, true);
+    }
+
 
     // ================= PDF ==============================
     public function downloadPdf(Consultation $consultation)
