@@ -254,6 +254,29 @@ class AdminServiceController extends Controller
         return back()->with('success', "Certyfikat X.509 został wygenerowany.\nPlik certyfikatu: {$certPathFile}\nPlik klucza: {$privateKeyPath}");
     }
 
+    /**
+     * Wyświetla formularz do generowania certyfikatu X.509 serwera
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showCertificateForm()
+    {
+        $certPath = storage_path('app/certs/server.crt');
+        $privateKeyPath = storage_path('app/certs/server.key');
+
+        $certificateExists = file_exists($certPath);
+        $privateKeyExists = file_exists($privateKeyPath);
+
+        $certificateInfo = $certificateExists ? openssl_x509_parse(file_get_contents($certPath)) : null;
+
+        return view('AdminService.certificate.create', compact(
+            'certificateExists',
+            'privateKeyExists',
+            'certificateInfo',
+            'certPath',
+            'privateKeyPath'
+        ));
+    }
 
 
 }
