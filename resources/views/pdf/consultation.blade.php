@@ -121,7 +121,7 @@
     <div><span class="label">Klient:</span> <span class="value">{{ $consultation->client->name ?? '-' }}</span></div>
     <div><span class="label">Data i godzina:</span> <span class="value">{{ \Carbon\Carbon::parse($consultation->consultation_datetime)->format('d.m.Y H:i') ?? '-' }}</span></div>
     <div><span class="label">Czas trwania:</span> <span class="value">{{ $consultation->duration_minutes ?? '-' }} min</span></div>
-     
+
 </div>
 
 <!-- Sekcja 2: Opis konsultacji -->
