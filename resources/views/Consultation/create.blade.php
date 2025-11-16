@@ -150,7 +150,6 @@
             const consultationTime = document.getElementById('consultation_time');
             const durationHours = document.getElementById('duration_hours');
             const durationMinutesHidden = document.getElementById('duration_minutes_hidden');
-
             const availabilityError = document.getElementById('availabilityError');
 
             const modeBtns = document.querySelectorAll('.modeBtn');
@@ -167,7 +166,6 @@
             }));
 
             prevBtns.forEach(btn => btn.addEventListener('click', () => showStep(currentStep-1)));
-
             showStep(0);
 
             // Tryby konsultacji
@@ -259,6 +257,7 @@
                                 duration_minutes: Math.round(hours*60)
                             })
                         });
+
                         const data = await response.json();
                         if(!data.available){
                             availabilityError.textContent = 'Klient ma już termin w tym czasie.';
