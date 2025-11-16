@@ -261,8 +261,8 @@ class AdminServiceController extends Controller
      */
     public function showCertificateForm()
     {
-        $certPath = storage_path('app/certs/server.crt');
-        $privateKeyPath = storage_path('app/certs/server.key');
+        $certPath = storage_path('app/certificates/server.crt');
+        $privateKeyPath = storage_path('app/certificates/server.key');
 
         $certificateExists = file_exists($certPath);
         $privateKeyExists = file_exists($privateKeyPath);

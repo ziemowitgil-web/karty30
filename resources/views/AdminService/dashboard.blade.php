@@ -25,7 +25,7 @@
                 <p class="mt-2"><strong>PHP:</strong> {{ phpversion() }}</p>
                 <p class="mt-2"><strong>System:</strong> {{ php_uname() }}</p>
                 <p class="mt-2"><strong>Certyfikat serwera:</strong>
-                    @if(file_exists(storage_path('certs/server.crt')))
+                    @if(file_exists('app/certificates/server.crt')))
                         <span class="text-green-600">Wygenerowany</span>
                     @else
                         <span class="text-red-600">Nie istnieje</span>
