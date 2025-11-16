@@ -160,6 +160,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{schedule}/cancelByFeer', [ScheduleController::class, 'cancelByFeer'])->name('cancelByFeer');
         Route::post('/{schedule}/cancelByClient', [ScheduleController::class, 'cancelByClient'])->name('cancelByClient');
         Route::get('/calendar', [ScheduleController::class, 'calendar'])->name('calendar');
+        Route::post('/schedules/check-availability', [ScheduleController::class, 'checkAvailability'])->name('schedules.checkAvailability');
 
         // Rescheduling
         Route::get('/{schedule}/reschedule', [ScheduleController::class, 'rescheduleForm'])->name('rescheduleForm');

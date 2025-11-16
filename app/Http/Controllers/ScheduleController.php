@@ -230,4 +230,31 @@ class ScheduleController extends Controller
             'accessed_at' => now()->toDateTimeString(),
         ];
     }
+
+    public function checkAvailability(Request $request)
+    {
+        $request->validate([
+            'client_id' => 'required|exists:clients,id',
+            'start_time' => 'required|date',
+            'duration_minutes' => 'required|integer|min:15',
+        ]);
+
+        $clientId = $request->client_id;
+        $startTime = $request->start_time;
+        $duration = $request->duration_minutes;
+
+        // logika sprawdzania dostępności (przykład)
+        $overlapping = Schedule::where('client_id', $clientId)
+            ->where('status', 'confirmed')
+            ->where(function($q) use ($startTime, $duration) {
+                $q->whereBetween('start_time', [$startTime, date('Y-m-d H:i:s', strtotime($startTime.' +'.$duration.' minutes'))])
+                    ->orWhereBetween(DB::raw("DATE_ADD(start_time, INTERVAL duration_minutes MINUTE)"), [$startTime, date('Y-m-d H:i:s', strtotime($startTime.' +'.$duration.' minutes'))]);
+            })
+            ->exists();
+
+        return response()->json([
+            'available' => !$overlapping
+        ]);
+    }
+
 }
