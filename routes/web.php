@@ -18,7 +18,6 @@ use App\Http\Controllers\AdminServiceController;
 | Strona główna
 |--------------------------------------------------------------------------
 */
-
 Route::get('/', function () {
     return auth()->check() ? redirect('/home') : redirect('/login');
 });
@@ -46,12 +45,23 @@ Route::post('/toggle-accessible', [HomeController::class, 'toggleAccessible'])
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 /*
-/*
 |--------------------------------------------------------------------------
 | Administrator
 |--------------------------------------------------------------------------
 */
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+
+    // Lista użytkowników
+    Route::get('/users', [AdminServiceController::class, 'UserList'])->name('users.list');
+
+    // Edycja użytkownika
+    Route::get('/users/{user}/edit', [AdminServiceController::class, 'editUser'])->name('users.edit');
+
+    // Aktualizacja użytkownika
+    Route::patch('/users/{user}', [AdminServiceController::class, 'updateUser'])->name('users.update');
+
+    // Usuwanie użytkownika
+    Route::delete('/users/{user}', [AdminServiceController::class, 'destroyUser'])->name('users.destroy');
 
     // Logi
     Route::get('/log', [AdminServiceController::class, 'log'])->name('logs');
@@ -59,12 +69,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Aktualizacja .env
     Route::post('/env/update', [AdminServiceController::class, 'updateEnv'])->name('env.update');
-
-    // Lista użytkowników z wyszukiwaniem
-    Route::get('/users', [AdminServiceController::class, 'UserList'])->name('users.list');
-
-  ##  Route::get('/users/{user}/edit', [AdminServiceController::class, 'editUser'])->name('users.edit');
-##    Route::delete('/users/{user}', [AdminServiceController::class, 'destroyUser'])->name('users.destroy');
 });
 
 /*
@@ -172,8 +176,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{consultation}/history', [ConsultationController::class, 'history'])->name('history');
         Route::get('/{consultation}/pdf', [ConsultationController::class, 'downloadPdf'])->name('pdf');
         Route::get('/{consultation}/xml', [ConsultationController::class, 'xml'])->name('xml');
-        Route::get('/consultations/{consultation}/details', [ConsultationController::class, 'details'])
-            ->name('consultations.details');
+        Route::get('/consultations/{consultation}/details', [ConsultationController::class, 'details'])->name('consultations.details');
+
         // Test staging
         Route::post('/delete-test-data', [ConsultationController::class, 'deleteTestData'])->name('deleteTestData');
 
@@ -184,8 +188,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/certificate/access', [ConsultationController::class, 'generateCertificate'])->name('certificate.access');
         Route::post('/certificate/revoke', [ConsultationController::class, 'revokeCertificate'])->name('certificate.revoke');
         Route::get('/certificate/download', [ConsultationController::class, 'downloadCertificate'])->name('certificate.download');
-
-
     });
 
     /*
@@ -200,5 +202,4 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/raports/consultation/approvedlastmonth', [RaportController::class, 'approvedLastMonthReport'])->name('raports.approvedLastMonth');
     Route::get('/raports/consultation/monthlyReportMRPIPS', [RaportController::class, 'monthlyReportMRPIPS'])->name('raports.monthlyReportMRPIPS');
     Route::get('/raports/consultation/monthlyReportMRPIPS/email', [RaportController::class, 'sendMonthlyReportMRPIPS'])->name('raports.monthlyReportMRPIPS.email');
-
 });

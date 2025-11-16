@@ -2,44 +2,44 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AdminService;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
-use Illuminate\Support\Facades\Auth;
 use App\Models\User;
-
-
 
 class AdminServiceController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Panel główny administratora
      */
-    public function index()
+    public function dashboard()
     {
-        //
+        $userCount = User::count();
+        $logCount = Activity::count();
+
+        return view('AdminService.dashboard', compact('userCount', 'logCount'));
     }
 
+    /**
+     * Logi aktywności
+     */
     public function log()
     {
-        // Pobierz logi, najnowsze pierwsze, 20 na stronę
         $logs = Activity::latest()->paginate(20);
-
         return view('AdminService.logs', compact('logs'));
     }
 
-    public function clearLog(Request $request)
+    /**
+     * Wyczyść wszystkie logi
+     */
+    public function clearLog()
     {
-        // Opcjonalnie: można sprawdzić rolę użytkownika
-        // if (!$request->user()->isAdmin()) {
-        //     abort(403);
-        // }
-
-        Activity::truncate(); // usuwa wszystkie logi
-
-        return redirect()->route('logs')->with('success', 'Logi zostały wyczyszczone.');
+        Activity::truncate();
+        return redirect()->route('admin.logs')->with('success', 'Logi zostały wyczyszczone.');
     }
 
+    /**
+     * Aktualizacja zmiennej .env
+     */
     public function updateEnv(Request $request)
     {
         $request->validate([
@@ -51,18 +51,13 @@ class AdminServiceController extends Controller
         $value = $request->value;
 
         $envPath = base_path('.env');
-
         if (!file_exists($envPath)) {
             return back()->with('error', '.env file not found!');
         }
 
-        // Odczyt pliku
         $envContents = file_get_contents($envPath);
+        $value = str_contains($value, ' ') ? "\"{$value}\"" : $value;
 
-        // Wartość z cudzysłowami jeśli zawiera spacje lub specjalne znaki
-        $value = str_contains($value, ' ') ? '"' . $value . '"' : $value;
-
-        // Jeśli zmienna istnieje -> nadpisz, jeśli nie -> dodaj
         if (preg_match("/^{$key}=.*$/m", $envContents)) {
             $envContents = preg_replace("/^{$key}=.*$/m", "{$key}={$value}", $envContents);
         } else {
@@ -71,15 +66,16 @@ class AdminServiceController extends Controller
 
         file_put_contents($envPath, $envContents);
 
-        // Opcjonalnie odśwież cache config
         \Artisan::call('config:clear');
         \Artisan::call('cache:clear');
 
         return back()->with('success', "Zmienna {$key} została zaktualizowana.");
     }
 
-    public function UserList () // Lista uzytkownikow
-
+    /**
+     * Lista użytkowników z wyszukiwaniem i paginacją
+     */
+    public function UserList(Request $request)
     {
         $query = User::query();
 
@@ -92,11 +88,45 @@ class AdminServiceController extends Controller
             });
         }
 
-        $users = $query->paginate(15)->withQueryString(); // zachowuje parametr search w paginacji
+        $users = $query->paginate(15)->withQueryString();
 
-        return view('AdminService.UserMgmt.index', compact('users'));
+        return view('AdminService.UserMgmt.list', compact('users'));
+    }
 
+    /**
+     * Formularz edycji użytkownika
+     */
+    public function editUser(User $user)
+    {
+        return view('AdminService.UserMgmt.edit', compact('user'));
+    }
 
+    /**
+     * Aktualizacja użytkownika
+     */
+    public function updateUser(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'document_number' => 'nullable|string|max:255',
+            'document_type' => 'nullable|string|max:255',
+            'document_issuer' => 'nullable|string|max:255',
+        ]);
+
+        $user->update($request->only([
+            'name', 'email', 'document_number', 'document_type', 'document_issuer'
+        ]));
+
+        return redirect()->route('admin.users.list')->with('success', 'Użytkownik został zaktualizowany.');
+    }
+
+    /**
+     * Usuwanie użytkownika
+     */
+    public function destroyUser(User $user)
+    {
+        $user->delete();
+        return redirect()->route('admin.users.list')->with('success', 'Użytkownik został usunięty.');
     }
 }
-
