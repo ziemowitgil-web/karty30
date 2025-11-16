@@ -15,7 +15,7 @@ class ScheduleController extends Controller
         $this->middleware('auth');
     }
 
-    // Lista terminarza
+    // ================= LISTA TERMINARZA =================
     public function index()
     {
         $schedules = Schedule::with('client')
@@ -25,268 +25,209 @@ class ScheduleController extends Controller
         return view('Schedule.index', compact('schedules'));
     }
 
-    // Formularz dodawania nowego terminu
+    // ================= FORMULARZ DODAWANIA =================
     public function create()
     {
-        $clients = Client::all();
+        $clients = $this->getClients();
         return view('Schedule.create', compact('clients'));
     }
 
-    // Zapisanie nowego terminu
+    // ================= ZAPIS NOWEGO TERMINU =================
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'date' => 'required|date',
-            'time' => 'required',
-            'duration_minutes' => 'required|integer|min:1',
-            'status' => 'required|in:preliminary,confirmed',
-            'description' => 'nullable|string|max:255',
-        ], [
-            'client_id.required' => 'Wybierz klienta.',
-            'date.required' => 'Podaj datę konsultacji.',
-            'time.required' => 'Podaj godzinę rozpoczęcia.',
-            'duration_minutes.required' => 'Podaj czas trwania konsultacji w minutach.',
-            'status.required' => 'Wybierz status konsultacji.',
-        ]);
+        $data = $this->validateSchedule($request);
 
-        $start_time = Carbon::parse($validated['date'] . ' ' . $validated['time']);
+        $this->createSchedule($data);
 
-        Schedule::create([
-            'user_id' => Auth::id(),
-            'client_id' => $validated['client_id'],
-            'start_time' => $start_time,
-            'duration_minutes' => $validated['duration_minutes'],
-            'status' => $validated['status'],
-            'description' => $validated['description'] ?? null,
-        ]);
-
-        return redirect()
-            ->route('schedules.index')
+        return redirect()->route('schedules.index')
             ->with('success', 'Nowy termin został dodany.');
     }
 
-    // Formularz edycji
+    // ================= FORMULARZ EDYCJI =================
     public function edit(Schedule $schedule)
     {
-        $clients = Client::all();
+        $clients = $this->getClients();
         return view('Schedule.edit', compact('schedule', 'clients'));
     }
 
-    // Aktualizacja terminu
+    // ================= AKTUALIZACJA TERMINU =================
     public function update(Request $request, Schedule $schedule)
     {
-        $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'date' => 'required|date',
-            'time' => 'required',
-            'duration_minutes' => 'required|integer|min:1',
-            'status' => 'required|in:preliminary,confirmed,cancelled,no_show,cancelled_by_feer,cancelled_by_client,attended',
-            'description' => 'nullable|string|max:255',
-        ]);
+        $data = $this->validateSchedule($request, $update = true);
 
-        $schedule->update([
-            'client_id' => $validated['client_id'],
-            'start_time' => Carbon::parse($validated['date'] . ' ' . $validated['time']),
-            'duration_minutes' => $validated['duration_minutes'],
-            'status' => $validated['status'],
-            'description' => $validated['description'] ?? null,
-        ]);
+        $schedule->update($data);
 
         return redirect()->route('schedules.index')->with('success', 'Termin został zaktualizowany.');
     }
 
-    // Usunięcie terminu
+    // ================= USUNIĘCIE TERMINU =================
     public function destroy(Schedule $schedule)
     {
         $schedule->delete();
         return redirect()->route('schedules.index')->with('success', 'Termin został usunięty.');
     }
 
-    // Oznaczenie obecności
+    // ================= OZNAZENIE OBECNOŚCI =================
     public function markAttendance(Schedule $schedule)
     {
         $schedule->update(['status' => 'attended']);
         return redirect()->route('schedules.index')->with('success', 'Obecność została zaznaczona.');
     }
 
-    // Odwołanie przez FEER
+    // ================= ODWOŁANIE TERMINU =================
     public function cancelByFeer(Request $request, Schedule $schedule)
     {
-        $request->validate([
-            'reason' => 'required|string|max:255',
-        ], [
-            'reason.required' => 'Podaj powód odwołania terminu.',
-        ]);
-
-        $schedule->update([
-            'status' => 'cancelled_by_feer',
-            'cancel_reason' => $request->reason,
-        ]);
-
-        return redirect()->route('schedules.index')
-            ->with('success', 'Termin został odwołany przez FEER.');
+        $data = $request->validate(['reason' => 'required|string|max:255']);
+        $schedule->update(['status' => 'cancelled_by_feer', 'cancel_reason' => $data['reason']]);
+        return redirect()->route('schedules.index')->with('success', 'Termin został odwołany przez FEER.');
     }
 
-    // Odwołanie przez Beneficjenta
     public function cancelByClient(Request $request, Schedule $schedule)
     {
-        $request->validate([
-            'reason' => 'required|string|max:255',
-        ], [
-            'reason.required' => 'Podaj powód odwołania.',
-        ]);
-
-        $schedule->update([
-            'status' => 'cancelled_by_client',
-            'cancel_reason' => $request->reason,
-        ]);
-
-        return redirect()->route('schedules.index')
-            ->with('success', 'Termin został odwołany przez Beneficjenta.');
+        $data = $request->validate(['reason' => 'required|string|max:255']);
+        $schedule->update(['status' => 'cancelled_by_client', 'cancel_reason' => $data['reason']]);
+        return redirect()->route('schedules.index')->with('success', 'Termin został odwołany przez klienta.');
     }
 
+    // ================= KALENDARZ =================
     public function calendar()
     {
         $schedules = Schedule::with('client')->get();
 
-        $events = $schedules->map(function($schedule) {
-            return [
-                'title' => $schedule->client->name ?? 'Brak klienta',
-                'start' => $schedule->start_time,
-                'end' => $schedule->start_time->copy()->addMinutes($schedule->duration_minutes),
-                'status' => $schedule->status_label,
-                'color' => match($schedule->status) {
-                    'preliminary' => '#facc15', // żółty
-                    'confirmed' => '#22c55e',   // zielony
-                    'cancelled', 'cancelled_by_feer' => 'red',
-                    'cancelled_by_client' => '#ef4444', // czerwony
-                    'attended' => '#0d9488',    // turkusowy
-                    default => '#9ca3af',       // szary
-                }
-            ];
-        });
+        $events = $schedules->map(fn($s) => [
+            'title' => $s->client->name ?? 'Brak klienta',
+            'start' => $s->start_time,
+            'end' => $s->start_time->copy()->addMinutes($s->duration_minutes),
+            'status' => $s->status_label,
+            'color' => $this->getStatusColor($s->status),
+        ]);
 
         return view('Schedule.calendar', compact('events'));
     }
 
-// Formularz zmiany terminu
+    // ================= ZMIANA TERMINU =================
     public function rescheduleForm(Schedule $schedule)
     {
-        $clients = \App\Models\Client::orderBy('name')->get();
+        $clients = $this->getClients();
         return view('Schedule.reschedule', compact('schedule', 'clients'));
     }
 
-// Zapisanie zmian terminu
     public function updateReschedule(Request $request, Schedule $schedule)
     {
-        $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'date' => 'required|date',
-            'time' => 'required',
-            'duration_minutes' => 'required|integer|min:1',
-            'status' => 'required|in:preliminary,confirmed,cancelled,no_show,attended',
-            'description' => 'nullable|string',
-        ]);
-
-        $schedule->client_id = $validated['client_id'];
-        $schedule->start_time = $validated['date'] . ' ' . $validated['time'];
-        $schedule->duration_minutes = $validated['duration_minutes'];
-        $schedule->status = $validated['status'];
-        $schedule->description = $validated['description'] ?? null;
-        $schedule->save();
+        $data = $this->validateSchedule($request, $update = true);
+        $schedule->update($data);
 
         return redirect()->route('schedules.index')->with('success', 'Termin został zaktualizowany.');
     }
 
-
+    // ================= SZYBKA REZERWACJA =================
     public function quickReserve(Request $request)
     {
-        // POST – weryfikacja hasła lub zapis formularza
         if ($request->isMethod('POST')) {
-            // Jeśli przesłano tylko hasło
-            if ($request->has('quick_reserve_password') && !$request->has('client_id')) {
-                if ($request->quick_reserve_password === env('QUICK_RESERVE_PASSWORD', 'Informatyka2025')) {
-                    session(['quick_reserve_access' => true]);
-
-                    // Logowanie otwarcia szybkiej rezerwacji
-                    activity('quick_reservation')
-                        ->withProperties([
-                            'ip' => $request->ip(),
-                            'user_agent' => $request->userAgent(),
-                            'accessed_at' => now()->toDateTimeString(),
-                        ])
-                        ->log('Otworzono szybka rezerwacja - hasło poprawne');
-
-                    return redirect()->route('quickreservation');
-                }
-                return redirect()->back()->withErrors(['quick_reserve_password' => 'Nieprawidłowe hasło.']);
-            }
-
-            // Sprawdzenie sesji
-            if (!session('quick_reserve_access')) {
-                return redirect()->back()->withErrors(['quick_reserve_password' => 'Wpisz poprawne hasło, aby uzyskać dostęp.']);
-            }
-
-            // Walidacja danych formularza
-            $validated = $request->validate([
-                'client_id' => 'required|exists:clients,id',
-                'date' => 'required|date',
-                'time' => 'required',
-                'duration_minutes' => 'required|integer|min:1',
-                'status' => 'required|in:preliminary,confirmed',
-                'description' => 'nullable|string|max:255',
-            ]);
-
-            $start_time = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['time']);
-
-            $schedule = Schedule::create([
-                'user_id' => auth()->id(),
-                'client_id' => $validated['client_id'],
-                'start_time' => $start_time,
-                'duration_minutes' => $validated['duration_minutes'],
-                'status' => $validated['status'],
-                'description' => $validated['description'] ?? null,
-            ]);
-
-            // Logowanie dodania nowej szybkiej rezerwacji
-            activity('quick_reservation')
-                ->withProperties([
-                    'ip' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'accessed_at' => now()->toDateTimeString(),
-                    'client_id' => $schedule->client_id,
-                    'client_name' => $schedule->client->name,
-                ])
-                ->performedOn($schedule)
-                ->log('Dodano szybką rezerwację dla klienta');
-
-            return redirect()->route('quickreservation')->with('success', 'Termin został dodany.');
+            return $this->handleQuickReservePost($request);
         }
 
-        // GET – dostęp do widoku
         if (!session('quick_reserve_access')) {
-            return view('Schedule.quickreservation'); // widok tylko z polem hasła
+            return view('Schedule.quickreservation'); // tylko pole hasła
         }
 
-        // Logowanie wejścia na widok szybkiej rezerwacji (GET)
         activity('quick_reservation')
-            ->withProperties([
-                'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'accessed_at' => now()->toDateTimeString(),
-            ])
+            ->withProperties($this->quickReserveLogProps($request))
             ->log('Otworzono widok szybkiej rezerwacji');
 
         $upcomingSchedules = Schedule::with('client')
             ->whereBetween('start_time', [now(), now()->addDays(14)])
-            ->orderBy('start_time', 'asc')
+            ->orderBy('start_time')
             ->get();
 
-        $clients = Client::orderBy('name')->get();
-
+        $clients = $this->getClients();
         return view('Schedule.quickreservation', compact('upcomingSchedules', 'clients'));
     }
 
+    // ================= METODY POMOCNICZE =================
+    protected function getClients()
+    {
+        return Client::orderBy('name')->get();
+    }
 
+    protected function validateSchedule(Request $request, $update = false)
+    {
+        $rules = [
+            'client_id' => 'required|exists:clients,id',
+            'date' => 'required|date',
+            'time' => 'required',
+            'duration_minutes' => 'required|integer|min:1',
+            'status' => 'required|in:preliminary,confirmed,cancelled,no_show,attended,cancelled_by_feer,cancelled_by_client',
+            'description' => 'nullable|string|max:255',
+        ];
+
+        $validated = $request->validate($rules);
+
+        $validated['start_time'] = Carbon::parse($validated['date'] . ' ' . $validated['time']);
+        unset($validated['date'], $validated['time']);
+
+        if (!$update) {
+            $validated['user_id'] = Auth::id();
+        }
+
+        return $validated;
+    }
+
+    protected function createSchedule(array $data)
+    {
+        return Schedule::create($data);
+    }
+
+    protected function getStatusColor(string $status)
+    {
+        return match($status) {
+            'preliminary' => '#facc15',
+            'confirmed' => '#22c55e',
+            'cancelled', 'cancelled_by_feer' => '#ef4444',
+            'cancelled_by_client' => '#ef4444',
+            'attended' => '#0d9488',
+            default => '#9ca3af',
+        };
+    }
+
+    protected function handleQuickReservePost(Request $request)
+    {
+        // Hasło tylko
+        if ($request->has('quick_reserve_password') && !$request->has('client_id')) {
+            if ($request->quick_reserve_password === env('QUICK_RESERVE_PASSWORD', 'Informatyka2025')) {
+                session(['quick_reserve_access' => true]);
+                activity('quick_reservation')
+                    ->withProperties($this->quickReserveLogProps($request))
+                    ->log('Otworzono szybką rezerwację - hasło poprawne');
+                return redirect()->route('quickreservation');
+            }
+            return redirect()->back()->withErrors(['quick_reserve_password' => 'Nieprawidłowe hasło.']);
+        }
+
+        if (!session('quick_reserve_access')) {
+            return redirect()->back()->withErrors(['quick_reserve_password' => 'Wpisz poprawne hasło, aby uzyskać dostęp.']);
+        }
+
+        $data = $this->validateSchedule($request);
+        $schedule = $this->createSchedule($data);
+
+        activity('quick_reservation')
+            ->withProperties(array_merge($this->quickReserveLogProps($request), [
+                'client_id' => $schedule->client_id,
+                'client_name' => $schedule->client->name,
+            ]))
+            ->performedOn($schedule)
+            ->log('Dodano szybką rezerwację dla klienta');
+
+        return redirect()->route('quickreservation')->with('success', 'Termin został dodany.');
+    }
+
+    protected function quickReserveLogProps(Request $request)
+    {
+        return [
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'accessed_at' => now()->toDateTimeString(),
+        ];
+    }
 }
