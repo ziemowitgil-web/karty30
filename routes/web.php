@@ -162,7 +162,7 @@ Route::prefix('consultations')->name('consultations.')->middleware('auth')->grou
 | RAPORTY
 |--------------------------------------------------------------------------
 */
-Route::get('/raport', [RaportController::class, 'index'])->name('raportsindex');
+Route::get('/raport', [RaportController::class, 'index'])->name('raport');
 
 Route::prefix('raports')->name('raports.')->middleware('auth')->group(function () {
     Route::get('/cancelled', [RaportController::class, 'cancelledSchedulesReport'])->name('cancelled');
