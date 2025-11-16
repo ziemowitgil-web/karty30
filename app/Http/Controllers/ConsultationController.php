@@ -38,8 +38,9 @@ class ConsultationController extends Controller
         }
 
         $consultations = $query->get();
+        $clients = Client::all();
 
-        return view('Consultation.index', compact('consultations'));
+        return view('Consultation.index', compact('consultations','clients'));
     }
 
     // ================= FORMULARZ ========================
