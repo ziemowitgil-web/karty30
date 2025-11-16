@@ -51,6 +51,12 @@ Route::get('/home', [HomeController::class, 'index'])->name('home');
 */
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
 
+
+    //Dashboard
+    Route::get('/dashboard', [AdminServiceController::class, 'dashboard'])->name('dashboard');
+    Route::get('/', [AdminServiceController::class, 'dashboard']); // /admin kieruje do dashboardu
+
+
     // Lista użytkowników
     Route::get('/users', [AdminServiceController::class, 'UserList'])->name('users.list');
 
@@ -69,7 +75,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Aktualizacja .env
     Route::post('/env/update', [AdminServiceController::class, 'updateEnv'])->name('env.update');
+
+
 });
+
+
 
 /*
 |--------------------------------------------------------------------------
