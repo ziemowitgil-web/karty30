@@ -13,9 +13,12 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class ConsultationController extends Controller
 {
-    public function __construct()
+    protected CertificateController $certificate;
+
+    public function __construct(CertificateController $certificate)
     {
         $this->middleware('auth');
+        $this->certificate = $certificate;
     }
 
     // ================= LISTA ============================
@@ -59,7 +62,7 @@ class ConsultationController extends Controller
             }
         }
 
-        $data = [
+        return view('Consultation.details', [
             'id' => $consultation->id,
             'client_name' => $consultation->client->name ?? 'SYSTEM',
             'user_name' => $consultation->user->name ?? '-',
@@ -73,9 +76,7 @@ class ConsultationController extends Controller
             'approved_by_name' => $consultation->approved_by_name,
             'approved_at' => $consultation->updated_at,
             'xmlData' => $xmlData,
-        ];
-
-        return view('Consultation.details', $data);
+        ]);
     }
 
     // ================= FORMULARZ ========================
@@ -159,8 +160,8 @@ class ConsultationController extends Controller
         }
 
         try {
-            $userCertData = $this->getUserCertificate(Auth::id());
-            $serverCertData = $this->getServerCertificate();
+            $userCertData = $this->certificate->getUserCertificate(Auth::id());
+            $serverCertData = $this->certificate->getServerCertificate();
 
             if (!$userCertData || !$serverCertData) {
                 $msg = "Brak certyfikatu użytkownika lub serwera. Nie można podpisać konsultacji.";
@@ -168,9 +169,9 @@ class ConsultationController extends Controller
                 return $jsonMode ? response()->json(['error' => $msg]) : redirect()->back()->with('error', $msg);
             }
 
-            $this->validateUserCertificate($userCertData, Auth::user()->email);
+            $this->certificate->validateUserCertificate($userCertData, Auth::user()->email);
 
-            $xmlContent = $this->generateConsultationXml($consultation, $userCertData, $serverCertData);
+            $xmlContent = $this->generateConsultationXml($consultation);
             $filePath = $this->saveXmlFile($consultation, $xmlContent);
             $sha1 = sha1_file($filePath);
 
@@ -203,8 +204,8 @@ class ConsultationController extends Controller
     {
         if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
 
-        $userCertData = $this->getUserCertificate(Auth::id());
-        $serverCertData = $this->getServerCertificate();
+        $userCertData = $this->certificate->getUserCertificate(Auth::id());
+        $serverCertData = $this->certificate->getServerCertificate();
 
         if (!$userCertData || !$serverCertData) {
             abort(403, 'Brak wymaganych certyfikatów do wygenerowania PDF.');
@@ -228,27 +229,7 @@ class ConsultationController extends Controller
     }
 
     // ================= FUNKCJE POMOCNICZE ========================
-    private function getUserCertificate($userId)
-    {
-        $path = storage_path("app/certificates/{$userId}_user_cert.pem");
-        return file_exists($path) ? file_get_contents($path) : null;
-    }
-
-    private function getServerCertificate()
-    {
-        $path = storage_path("app/certificates/server_cert.pem");
-        return file_exists($path) ? file_get_contents($path) : null;
-    }
-
-    private function validateUserCertificate($certData, $userEmail)
-    {
-        if (empty($certData)) {
-            throw new \Exception("Certyfikat użytkownika nie jest dostępny.");
-        }
-        // Możesz tu dodać walidację zgodnie z regułami (np. sprawdzenie email w certyfikacie)
-    }
-
-    private function generateConsultationXml($consultation, $userCertData, $serverCertData)
+    private function generateConsultationXml(Consultation $consultation)
     {
         $xml = new \SimpleXMLElement('<consultation/>');
         $xml->addChild('id', $consultation->id);
@@ -264,7 +245,7 @@ class ConsultationController extends Controller
         return $xml->asXML();
     }
 
-    private function saveXmlFile($consultation, $xmlContent)
+    private function saveXmlFile(Consultation $consultation, $xmlContent)
     {
         $dir = storage_path('app/consultations');
         if (!file_exists($dir)) mkdir($dir, 0755, true);
@@ -273,7 +254,7 @@ class ConsultationController extends Controller
         return $path;
     }
 
-    private function generateQrData($consultation)
+    private function generateQrData(Consultation $consultation)
     {
         return route('consultations.details', $consultation->id) . "#sha1={$consultation->sha1sum}";
     }

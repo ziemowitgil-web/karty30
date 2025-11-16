@@ -12,6 +12,8 @@ use App\Http\Controllers\Auth\LoginController;
 use Laragear\WebAuthn\Http\Controllers\WebAuthnLoginController;
 use App\Http\Controllers\WebAuthn\WebAuthnRegisterController;
 use App\Http\Controllers\AdminServiceController;
+use App\Http\Controllers\CertificateController;
+
 
 /*
 |--------------------------------------------------------------------------
