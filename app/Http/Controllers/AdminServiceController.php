@@ -5,16 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Spatie\Activitylog\Models\Activity;
-
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 
 class AdminServiceController extends Controller
 {
     /**
      * Panel główny administratora
-     *
-     * @return \Illuminate\View\View
      */
-
     public function dashboard()
     {
         $userCount = User::count();
@@ -26,8 +24,6 @@ class AdminServiceController extends Controller
 
     /**
      * Logi aktywności
-     *
-     * @return \Illuminate\View\View
      */
     public function log()
     {
@@ -37,8 +33,6 @@ class AdminServiceController extends Controller
 
     /**
      * Wyczyść wszystkie logi
-     *
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function clearLog()
     {
@@ -47,48 +41,7 @@ class AdminServiceController extends Controller
     }
 
     /**
-     * Aktualizacja zmiennej .env
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function updateEnv(Request $request)
-    {
-        $request->validate([
-            'key' => 'required|string',
-            'value' => 'nullable|string',
-        ]);
-
-        $key = $request->key;
-        $value = $request->value;
-
-        $envPath = base_path('.env');
-        if (!file_exists($envPath)) {
-            return back()->with('error', '.env file not found!');
-        }
-
-        $envContents = file_get_contents($envPath);
-        $value = str_contains($value, ' ') ? "\"{$value}\"" : $value;
-
-        if (preg_match("/^{$key}=.*$/m", $envContents)) {
-            $envContents = preg_replace("/^{$key}=.*$/m", "{$key}={$value}", $envContents);
-        } else {
-            $envContents .= PHP_EOL . "{$key}={$value}";
-        }
-
-        file_put_contents($envPath, $envContents);
-
-        \Artisan::call('config:clear');
-        \Artisan::call('cache:clear');
-
-        return back()->with('success', "Zmienna {$key} została zaktualizowana.");
-    }
-
-    /**
      * Lista użytkowników z wyszukiwaniem i paginacją
-     *
-     * @param Request $request
-     * @return \Illuminate\View\View
      */
     public function UserList(Request $request)
     {
@@ -104,15 +57,11 @@ class AdminServiceController extends Controller
         }
 
         $users = $query->paginate(15)->withQueryString();
-
         return view('AdminService.UserMgmt.list', compact('users'));
     }
 
     /**
      * Formularz edycji użytkownika
-     *
-     * @param User $user
-     * @return \Illuminate\View\View
      */
     public function editUser(User $user)
     {
@@ -121,10 +70,6 @@ class AdminServiceController extends Controller
 
     /**
      * Aktualizacja użytkownika
-     *
-     * @param Request $request
-     * @param User $user
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function updateUser(Request $request, User $user)
     {
@@ -145,9 +90,6 @@ class AdminServiceController extends Controller
 
     /**
      * Usuwanie użytkownika
-     *
-     * @param User $user
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroyUser(User $user)
     {
@@ -157,8 +99,6 @@ class AdminServiceController extends Controller
 
     /**
      * Formularz dodawania nowego użytkownika
-     *
-     * @return \Illuminate\View\View
      */
     public function createUser()
     {
@@ -167,9 +107,6 @@ class AdminServiceController extends Controller
 
     /**
      * Zapis nowego użytkownika i wysyłka maila z hasłem
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function storeUser(Request $request)
     {
@@ -181,7 +118,7 @@ class AdminServiceController extends Controller
             'document_issuer' => 'nullable|string|max:255',
         ]);
 
-        $password = \Str::random(12);
+        $password = Str::random(12);
 
         $user = User::create([
             'name' => $request->name,
@@ -193,16 +130,35 @@ class AdminServiceController extends Controller
         ]);
 
         // Wyślij maila z hasłem
-        \Mail::to($user->email)->send(new \App\Mail\UserCreated($user, $password));
+        Mail::to($user->email)->send(new \App\Mail\UserCreated($user, $password));
 
         return redirect()->route('admin.users.list')->with('success', 'Użytkownik został dodany i otrzymał maila z hasłem.');
     }
 
     /**
-     * Generuje certyfikat X.509 serwera i zapisuje klucz prywatny i certyfikat.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * Wyświetla formularz do generowania certyfikatu X.509 serwera
+     */
+    public function showCertificateForm()
+    {
+        $certDir = storage_path('certificates');
+        $certPath = $certDir . '/server.crt';
+        $privateKeyPath = $certDir . '/server.key';
+
+        $certificateExists = file_exists($certPath);
+        $privateKeyExists = file_exists($privateKeyPath);
+        $certificateInfo = $certificateExists ? openssl_x509_parse(file_get_contents($certPath)) : null;
+
+        return view('AdminService.certificate.create', compact(
+            'certificateExists',
+            'privateKeyExists',
+            'certificateInfo',
+            'certPath',
+            'privateKeyPath'
+        ));
+    }
+
+    /**
+     * Generuje certyfikat X.509 serwera
      */
     public function generateServerCertificate(Request $request)
     {
@@ -218,7 +174,6 @@ class AdminServiceController extends Controller
             "countryName" => $request->country ?? 'PL',
         ];
 
-        // Generowanie klucza prywatnego
         $privateKey = openssl_pkey_new([
             "private_key_bits" => 2048,
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
@@ -228,7 +183,6 @@ class AdminServiceController extends Controller
             return back()->with('error', 'Nie udało się wygenerować klucza prywatnego.');
         }
 
-        // Generowanie certyfikatu (ważny przez 365 dni)
         $csr = openssl_csr_new($dn, $privateKey);
         $x509 = openssl_csr_sign($csr, null, $privateKey, 365);
 
@@ -237,46 +191,17 @@ class AdminServiceController extends Controller
         }
 
         // Tworzenie katalogu, jeśli nie istnieje
-        $certPath = storage_path('app/certs');
-        if (!file_exists($certPath)) {
-            mkdir($certPath, 0755, true);
+        $certDir = storage_path('certificates');
+        if (!file_exists($certDir)) {
+            mkdir($certDir, 0755, true);
         }
 
-        $privateKeyPath = $certPath . '/server.key';
-        $certPathFile = $certPath . '/server.crt';
+        $privateKeyPath = $certDir . '/server.key';
+        $certPath = $certDir . '/server.crt';
 
-        // Zapis klucza prywatnego
         openssl_pkey_export_to_file($privateKey, $privateKeyPath);
+        openssl_x509_export_to_file($x509, $certPath);
 
-        // Zapis certyfikatu
-        openssl_x509_export_to_file($x509, $certPathFile);
-
-        return back()->with('success', "Certyfikat X.509 został wygenerowany.\nPlik certyfikatu: {$certPathFile}\nPlik klucza: {$privateKeyPath}");
+        return back()->with('success', "Certyfikat X.509 został wygenerowany.\nPlik certyfikatu: {$certPath}\nPlik klucza: {$privateKeyPath}");
     }
-
-    /**
-     * Wyświetla formularz do generowania certyfikatu X.509 serwera
-     *
-     * @return \Illuminate\View\View
-     */
-    public function showCertificateForm()
-    {
-        $certPath = storage_path('app/certificates/server.crt');
-        $privateKeyPath = storage_path('app/certificates/server.key');
-
-        $certificateExists = file_exists($certPath);
-        $privateKeyExists = file_exists($privateKeyPath);
-
-        $certificateInfo = $certificateExists ? openssl_x509_parse(file_get_contents($certPath)) : null;
-
-        return view('AdminService.certificate.create', compact(
-            'certificateExists',
-            'privateKeyExists',
-            'certificateInfo',
-            'certPath',
-            'privateKeyPath'
-        ));
-    }
-
-
 }
