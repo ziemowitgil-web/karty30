@@ -254,4 +254,6 @@ class AdminServiceController extends Controller
         return back()->with('success', "Certyfikat X.509 został wygenerowany.\nPlik certyfikatu: {$certPathFile}\nPlik klucza: {$privateKeyPath}");
     }
 
+
+
 }

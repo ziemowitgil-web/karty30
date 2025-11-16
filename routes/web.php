@@ -86,6 +86,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 // Generowanie certyfikatu
     Route::post('/certificate/generate', [AdminServiceController::class, 'generateServerCertificate'])->name('certificate.generate');
 
+    // Widok certyfikatu
+
+    Route::get('/certificate/create', [AdminServiceController::class, 'showCertificateForm'])->name('certificate.form');
+
+
 });
 
 
