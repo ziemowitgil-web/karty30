@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 use App\Models\User;
+use Spatie\Activitylog\Models\Activity;
+
 
 class AdminServiceController extends Controller
 {
@@ -13,12 +15,14 @@ class AdminServiceController extends Controller
      *
      * @return \Illuminate\View\View
      */
+
     public function dashboard()
     {
         $userCount = User::count();
         $logCount = Activity::count();
+        $recentLogs = Activity::latest()->take(10)->get(); // 10 ostatnich logów
 
-        return view('AdminService.dashboard', compact('userCount', 'logCount'));
+        return view('AdminService.dashboard', compact('userCount', 'logCount', 'recentLogs'));
     }
 
     /**
