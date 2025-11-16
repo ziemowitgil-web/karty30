@@ -1,187 +1,184 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto p-4">
-        <h1 class="text-3xl font-bold mb-4">Konsultacje</h1>
+    <div class="container mx-auto p-6 max-w-3xl">
+        <h1 id="pageTitle" class="text-3xl font-bold mb-6 text-gray-900">Dodaj konsultację</h1>
 
-        {{-- Krótkie info o certyfikacie --}}
-        @php
-            $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
-            $certActive = file_exists($certPath);
-            $certCN = $certActive ? openssl_x509_parse(openssl_x509_read(file_get_contents($certPath)))['subject']['CN'] ?? '-' : null;
-        @endphp
-
-        <div class="{{ $certActive ? 'border-l-4 border-blue-500 bg-blue-50 text-blue-700' : 'border-l-4 border-red-500 bg-red-50 text-red-700' }} p-3 rounded mb-4">
-            @if($certActive)
-                Certyfikat aktywny: <strong>{{ $certCN }}</strong>
-            @else
-                Brak certyfikatu – podpisz dokumenty nieaktywny
-            @endif
-        </div>
-
-        <a href="{{ route('consultations.create') }}"
-           class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 mb-6 inline-block">
-            Nowa konsultacja
-        </a>
-
-        {{-- Tabela konsultacji --}}
-        <h2 class="text-xl font-semibold mt-6 mb-2">Lista konsultacji</h2>
-        <div class="overflow-x-auto shadow rounded-lg border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-4 py-2 text-left font-semibold text-gray-700">ID</th>
-                    <th class="px-4 py-2 text-left font-semibold text-gray-700">Klient</th>
-                    <th class="px-4 py-2 text-left font-semibold text-gray-700">Tryb</th>
-                    <th class="px-4 py-2 text-left font-semibold text-gray-700">Data i godzina</th>
-                    <th class="px-4 py-2 text-left font-semibold text-gray-700">Czas</th>
-                    <th class="px-4 py-2 text-left font-semibold text-gray-700">SHA1</th>
-                    <th class="px-4 py-2 text-left font-semibold text-gray-700">Akcje</th>
-                </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                @foreach($consultations as $c)
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-4 py-2">{{ $c->id }}</td>
-                        <td class="px-4 py-2">{{ $c->client->name ?? '-' }}</td>
-                        <td class="px-4 py-2">
-                            @switch($c->mode)
-                                @case('reservation') Z rezerwacji @break
-                                @case('manual') Manualna @break
-                                @case('pfron') PFRON @break
-                                @default -
-                            @endswitch
-                        </td>
-                        <td class="px-4 py-2">{{ \Carbon\Carbon::parse($c->consultation_datetime)->format('d.m.Y H:i') }}</td>
-                        <td class="px-4 py-2">{{ intdiv($c->duration_minutes,60) }}h {{ $c->duration_minutes % 60 }}m</td>
-                        <td class="px-4 py-2 font-mono">{{ $c->sha1sum ?? '-' }}</td>
-                        <td class="px-4 py-2 flex flex-wrap gap-2">
-                            @if(!$c->sha1sum)
-                                <button class="sign-button bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400"
-                                        data-id="{{ $c->id }}"
-                                        {{ $certActive ? '' : 'disabled' }}
-                                        aria-label="Podpisz konsultację #{{ $c->id }}">
-                                    Podpisz
-                                </button>
-                            @endif
-                            <button class="history-button bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400"
-                                    data-id="{{ $c->id }}"
-                                    aria-label="Historia konsultacji #{{ $c->id }}">
-                                Historia
-                            </button>
-                        </td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
-
-        {{-- Modale --}}
         <div id="ariaMessage" class="sr-only" aria-live="polite"></div>
 
-        <div id="signModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white p-6 rounded-lg w-96">
-                <h3 class="text-lg font-semibold mb-4">Podpis konsultacji</h3>
-                <p id="signModalText" class="mb-4"></p>
-                <div class="flex justify-end gap-2">
-                    <button id="signCancel" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Anuluj</button>
-                    <button id="signConfirm" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Podpisz</button>
-                </div>
-            </div>
-        </div>
+        <div id="formAlert" class="sr-only text-green-700 bg-green-100 p-3 mb-4 rounded" role="alert" aria-live="polite"></div>
 
-        <div id="historyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white p-6 rounded-lg w-96 max-h-[80vh] overflow-y-auto">
-                <h3 class="text-lg font-semibold mb-4">Historia konsultacji</h3>
-                <ul id="historyList" class="text-sm text-gray-700 space-y-1"></ul>
-                <div class="flex justify-end mt-4">
-                    <button id="historyClose" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Zamknij</button>
+        <form id="consultationForm" method="POST" class="space-y-6 bg-white p-6 rounded shadow" novalidate>
+            @csrf
+            <input type="hidden" name="mode" id="mode_hidden" value="manual">
+            <input type="hidden" name="duration_minutes" id="duration_minutes_hidden">
+
+            {{-- Tryb konsultacji --}}
+            <div class="mb-4">
+                <label class="block font-medium text-gray-700 mb-1">Tryb konsultacji</label>
+                <div class="flex gap-4">
+                    <button type="button" class="modeBtn bg-blue-600 text-white px-4 py-2 rounded" data-mode="reservation">Rezerwacja</button>
+                    <button type="button" class="modeBtn bg-gray-200 text-gray-800 px-4 py-2 rounded" data-mode="manual">Bez rezerwacji</button>
+                    <button type="button" class="modeBtn bg-gray-200 text-gray-800 px-4 py-2 rounded" data-mode="pfron">Szkolenie PFRON</button>
                 </div>
             </div>
-        </div>
+
+            {{-- Rezerwacja --}}
+            <div id="reservationSection" class="hidden">
+                <label for="scheduleSelect" class="block font-medium text-gray-700 mb-1">Wybierz rezerwację</label>
+                <select id="scheduleSelect" name="schedule_id" class="w-full border rounded p-2 mb-2">
+                    <option value="">— Brak rezerwacji —</option>
+                    @foreach($schedules as $s)
+                        <option value="{{ $s->id }}" data-client="{{ $s->client_id }}" data-date="{{ \Carbon\Carbon::parse($s->start_time)->format('Y-m-d') }}" data-time="{{ \Carbon\Carbon::parse($s->start_time)->format('H:i') }}" data-duration="{{ $s->duration_minutes }}">
+                            {{ $s->id }} — {{ $s->client->name ?? '-' }} — {{ \Carbon\Carbon::parse($s->start_time)->format('d.m.Y H:i') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Klient --}}
+            <div id="clientSection" class="mb-4">
+                <label for="clientSelect" class="block font-medium text-gray-700 mb-1">Klient</label>
+                <select id="clientSelect" name="client_id" class="w-full border rounded p-2">
+                    <option value="">— Wybierz klienta —</option>
+                    @foreach($clients as $client)
+                        <option value="{{ $client->id }}">{{ $client->name }}</option>
+                    @endforeach
+                    <option value="SYSTEM">SYSTEM</option>
+                </select>
+                <p id="clientError" class="text-red-600 text-sm mt-1 sr-only" aria-live="polite"></p>
+            </div>
+
+            {{-- Data, godzina, czas --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="consultation_date" class="block font-medium text-gray-700 mb-1">Data</label>
+                    <input type="date" id="consultation_date" name="consultation_date" class="w-full border rounded p-2">
+                    <p id="dateError" class="text-red-600 text-sm sr-only" aria-live="polite"></p>
+                </div>
+                <div>
+                    <label for="consultation_time" class="block font-medium text-gray-700 mb-1">Godzina</label>
+                    <input type="time" id="consultation_time" name="consultation_time" class="w-full border rounded p-2">
+                    <p id="timeError" class="text-red-600 text-sm sr-only" aria-live="polite"></p>
+                </div>
+                <div>
+                    <label for="duration_hours" class="block font-medium text-gray-700 mb-1">Czas trwania (h)</label>
+                    <input type="number" id="duration_hours" min="0.25" max="24" step="0.25" class="w-full border rounded p-2">
+                    <p id="durationError" class="text-red-600 text-sm sr-only" aria-live="polite"></p>
+                </div>
+            </div>
+
+            <p id="availabilityError" class="text-red-600 text-sm sr-only" aria-live="polite"></p>
+
+            {{-- Dalsze działania i opis --}}
+            <div>
+                <label for="next_action" class="block font-medium text-gray-700 mb-1">Dalsze działania</label>
+                <input type="text" id="next_action" name="next_action" class="w-full border rounded p-2 mb-2">
+
+                <label for="description" class="block font-medium text-gray-700 mb-1">Opis / notatka</label>
+                <textarea id="description" name="description" rows="3" class="w-full border rounded p-2"></textarea>
+            </div>
+
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Zapisz i podpisz</button>
+
+            <p class="text-xs text-gray-500 mt-2">Konsultacja zostanie od razu podpisana elektronicznie po zapisaniu.</p>
+        </form>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const ariaMessage = document.getElementById('ariaMessage');
+            const modeBtns = document.querySelectorAll('.modeBtn');
+            const reservationSection = document.getElementById('reservationSection');
+            const clientSelect = document.getElementById('clientSelect');
+            const modeHidden = document.getElementById('mode_hidden');
 
-            // --- Podpis w AJAX ---
-            const signModal = document.getElementById('signModal');
-            const signModalText = document.getElementById('signModalText');
-            let signId = null;
+            const scheduleSelect = document.getElementById('scheduleSelect');
+            const consultationDate = document.getElementById('consultation_date');
+            const consultationTime = document.getElementById('consultation_time');
+            const durationHours = document.getElementById('duration_hours');
+            const durationHidden = document.getElementById('duration_minutes_hidden');
+            const availabilityError = document.getElementById('availabilityError');
+            const formAlert = document.getElementById('formAlert');
 
-            document.querySelectorAll('.sign-button').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    signId = btn.dataset.id;
-                    signModalText.textContent = `Czy chcesz podpisać konsultację #${signId}?`;
-                    signModal.classList.remove('hidden');
-                    ariaMessage.textContent = `Otworzono modal podpisu konsultacji #${signId}`;
+            // tryby
+            modeBtns.forEach(btn => btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                modeHidden.value = mode;
+
+                modeBtns.forEach(b => {
+                    b.classList.remove('bg-blue-600','text-white');
+                    b.classList.add('bg-gray-200','text-gray-800');
                 });
+                btn.classList.add('bg-blue-600','text-white');
+
+                reservationSection.style.display = (mode==='reservation') ? 'block' : 'none';
+                clientSelect.disabled = (mode==='reservation');
+            }));
+
+            // auto-fill rezerwacji
+            scheduleSelect?.addEventListener('change', () => {
+                const sel = scheduleSelect.selectedOptions[0];
+                if(!sel.value) return;
+                clientSelect.value = sel.dataset.client;
+                consultationDate.value = sel.dataset.date;
+                consultationTime.value = sel.dataset.time;
+                durationHours.value = (sel.dataset.duration/60).toFixed(2);
+                durationHidden.value = sel.dataset.duration;
             });
 
-            document.getElementById('signCancel').addEventListener('click', () => {
-                signId = null;
-                signModal.classList.add('hidden');
-                ariaMessage.textContent = `Anulowano podpis konsultacji`;
+            // godziny -> minuty
+            durationHours.addEventListener('input', () => {
+                const h = parseFloat(durationHours.value);
+                durationHidden.value = !isNaN(h) ? Math.round(h*60) : '';
             });
 
-            document.getElementById('signConfirm').addEventListener('click', () => {
-                if(!signId) return;
-                fetch(`/consultations/${signId}/sign`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    }
-                }).then(res => res.json())
-                    .then(data => {
-                        if(data.success){
-                            const row = document.querySelector(`button.sign-button[data-id='${signId}']`).closest('tr');
-                            row.querySelector('td:nth-child(6)').textContent = data.sha1sum;
-                            row.querySelector('.sign-button')?.remove();
-                            signModal.classList.add('hidden');
-                            ariaMessage.textContent = `Konsultacja #${signId} podpisana`;
-                        } else {
-                            alert('Błąd podpisu: ' + data.message);
-                            ariaMessage.textContent = `Błąd podpisu konsultacji #${signId}`;
-                        }
+            // AJAX check availability + podpis od razu
+            document.getElementById('consultationForm').addEventListener('submit', async function(e){
+                e.preventDefault();
+                availabilityError.classList.add('sr-only');
+                formAlert.classList.add('sr-only');
+
+                const client_id = clientSelect.value;
+                const start = consultationDate.value+' '+consultationTime.value;
+                const dur = parseInt(durationHidden.value);
+
+                if(!client_id || !start || !dur) {
+                    alert('Uzupełnij wymagane pola.');
+                    return;
+                }
+
+                try {
+                    // check availability
+                    const checkRes = await fetch("{{ route('schedules.checkAvailability') }}", {
+                        method:'POST',
+                        headers: {'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+                        body: JSON.stringify({client_id,start_time:start,duration_minutes:dur})
                     });
-            });
+                    const data = await checkRes.json();
+                    if(!data.available){
+                        availabilityError.textContent='Klient ma już termin w tym czasie.';
+                        availabilityError.classList.remove('sr-only');
+                        availabilityError.focus();
+                        return;
+                    }
 
-            // --- Historia w AJAX ---
-            const historyModal = document.getElementById('historyModal');
-            const historyList = document.getElementById('historyList');
+                    // save + podpis
+                    const formData = new FormData(this);
+                    const saveRes = await fetch("{{ route('consultations.store') }}", {
+                        method:'POST',
+                        headers: {'X-CSRF-TOKEN':'{{ csrf_token() }}'},
+                        body: formData
+                    });
+                    const saveData = await saveRes.json();
+                    if(saveData.success){
+                        formAlert.textContent='Konsultacja zapisana i podpisana!';
+                        formAlert.classList.remove('sr-only');
+                        this.reset();
+                    } else {
+                        alert('Błąd: '+(saveData.message||'Nie udało się zapisać.'));
+                    }
 
-            document.querySelectorAll('.history-button').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const id = btn.dataset.id;
-                    historyList.innerHTML = '<li>Ładowanie...</li>';
-                    historyModal.classList.remove('hidden');
-                    ariaMessage.textContent = `Ładowanie historii konsultacji #${id}`;
-
-                    fetch(`/consultations/${id}/history`, {
-                        headers: { 'Accept': 'application/json' }
-                    }).then(res => res.json())
-                        .then(data => {
-                            historyList.innerHTML = '';
-                            if(data.history && data.history.length > 0){
-                                data.history.forEach(h => {
-                                    const li = document.createElement('li');
-                                    li.textContent = `${h.created_at}: ${h.action}`;
-                                    historyList.appendChild(li);
-                                });
-                            } else {
-                                historyList.innerHTML = '<li>Brak historii</li>';
-                            }
-                            ariaMessage.textContent = `Historia konsultacji #${id} załadowana`;
-                        });
-                });
-            });
-
-            document.getElementById('historyClose').addEventListener('click', () => {
-                historyModal.classList.add('hidden');
-                historyList.innerHTML = '';
-                ariaMessage.textContent = `Zamknięto modal historii konsultacji`;
+                } catch(err){ console.error(err); alert('Błąd serwera.'); }
             });
         });
     </script>
