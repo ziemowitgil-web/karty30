@@ -1,24 +1,106 @@
-<!-- Górny blok: QR + dane użytkownika i certyfikatów -->
-<div style="display: flex; justify-content: flex-start; align-items: flex-start; margin-bottom: 25px; border-bottom: 2px solid #003366; padding-bottom: 10px;">
+<style>
+    body {
+        font-family: DejaVu Sans, sans-serif;
+        font-size: 12pt;
+        margin: 40px;
+        color: #000;
+        background-color: #fff;
+    }
 
-    <!-- QR Code -->
+    .header {
+        text-align: center;
+        font-size: 18pt;
+        font-weight: bold;
+        color: #003366;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #003366;
+        padding-bottom: 5px;
+    }
+
+    .subheader {
+        font-size: 14pt;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .section {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background-color: #fdfdfd;
+    }
+
+    .section-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 13.5pt;
+        border-bottom: 1px solid #666;
+        padding-bottom: 3px;
+    }
+
+    .label {
+        font-weight: bold;
+        width: 200px;
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    .description {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: #fff;
+        min-height: 60px;
+    }
+
+    .qr-block {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        margin-bottom: 25px;
+    }
+
+    .qr-block img {
+        width: 120px;
+        height: 120px;
+        border: 1px solid #ccc;
+        padding: 5px;
+        border-radius: 4px;
+        margin-right: 20px;
+    }
+
+    .cert-info {
+        font-size: 11pt;
+        line-height: 1.4;
+    }
+
+    .footer {
+        font-size: 9pt;
+        text-align: center;
+        color: #666;
+        margin-top: 30px;
+    }
+</style>
+
+<div class="header">FEER</div>
+<div class="subheader">Karta konsultacyjna</div>
+
+<!-- QR + dane użytkownika -->
+<div class="qr-block">
     @if(!empty($qrImage))
-        <div style="margin-right: 20px;">
-            <img src="data:image/png;base64,{{ $qrImage }}" alt="QR Code" style="width:120px; height:120px; border:1px solid #ccc; padding:5px; border-radius:4px;">
-        </div>
+        <img src="data:image/png;base64,{{ $qrImage }}" alt="QR Code">
     @endif
-
-    <!-- Dane użytkownika i certyfikatów -->
-    <div style="font-size: 11pt; line-height:1.4;">
+    <div class="cert-info">
         <div><strong>Użytkownik:</strong> {{ Auth::user()->name }}</div>
         <div><strong>CN certyfikatu:</strong> {{ $certificate['CN'] ?? $certificate['common_name'] ?? '-' }}</div>
-        <div><strong>Data ważności certyfikatu:</strong> {{ $certificate['valid_from'] ?? '-' }} – {{ $certificate['valid_to'] ?? '-' }}</div>
+        <div><strong>Ważny od-do:</strong> {{ $certificate['valid_from'] ?? '-' }} – {{ $certificate['valid_to'] ?? '-' }}</div>
         <div><strong>Certyfikat serwera:</strong> {{ $serverCertificate['CN'] ?? $serverCertificate['common_name'] ?? '-' }} ({{ $serverCertificate['valid_from'] ?? '-' }} – {{ $serverCertificate['valid_to'] ?? '-' }})</div>
         @if(isset($certificate['is_test_certificate']) && $certificate['is_test_certificate'])
             <div style="color:red;"><strong>Certyfikat testowy</strong></div>
         @endif
     </div>
-
 </div>
 
 <!-- Sekcja 1: Informacje o kliencie i konsultacji -->
@@ -37,9 +119,9 @@
     <div class="description">{{ $consultation->description ?? '-' }}</div>
 </div>
 
-<!-- Sekcja 3: Podpis cyfrowy i dane autoryzacyjne -->
+<!-- Sekcja 3: Podpis cyfrowy -->
 <div class="section">
-    <div class="section-title">Podpis cyfrowy</div>
+    <div class="section-title">Podpis cyfrowy i dane autoryzacyjne</div>
     <div><span class="label">Zatwierdził:</span> {{ $approvedBy ?? '-' }}</div>
     <div><span class="label">IP użytkownika:</span> {{ $ipFormatted ?? '-' }} <small>({{ $ipRaw ?? '-' }})</small></div>
     <div><span class="label">Data wydruku:</span> {{ $printDateTime ?? '-' }}</div>
@@ -54,4 +136,8 @@
     @if(isset($certificate['is_test_certificate']) && $certificate['is_test_certificate'])
         <div style="color:red;"><strong>Certyfikat testowy</strong></div>
     @endif
+</div>
+
+<div class="footer">
+    Dokument wewnętrzny do sprawozdawczości | RODO: zgoda | PDF wygenerowany automatycznie | FEER
 </div>
