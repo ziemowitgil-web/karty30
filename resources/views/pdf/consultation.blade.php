@@ -66,7 +66,7 @@
             margin-top: 30px;
         }
 
-        .log-section {
+        .log-section, .cert-section, .server-cert-section {
             font-size: 10pt;
             color: #444;
             background-color: #f1f1f1;
@@ -87,6 +87,11 @@
             padding: 5px;
             border-radius: 4px;
         }
+
+        .highlight-red {
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -94,7 +99,7 @@
 <div class="organization">FEER</div>
 <div class="header">Karta konsultacyjna</div>
 
-<!-- QR kod -->
+<!-- QR Code -->
 @if(!empty($qrImage))
     <div class="qr-code">
         <img src="data:image/png;base64,{{ $qrImage }}" alt="QR Code">
@@ -138,20 +143,34 @@
     </div>
 </div>
 
-<!-- Dane podpisu cyfrowego -->
+<!-- Dane certyfikatu użytkownika -->
 @if(!empty($certificate))
-    <div class="section">
-        <div class="section-title">Podpis cyfrowy</div>
-        <div><span class="label">Common Name (CN):</span> {{ $certificate['CN'] ?? $certificate['common_name'] ?? '-' }}</div>
+    <div class="section cert-section">
+        <div class="section-title">Podpis cyfrowy użytkownika</div>
+        <div><span class="label">Common Name (CN):</span> {{ $certificate['common_name'] ?? '-' }}</div>
         <div><span class="label">E-mail:</span> {{ $certificate['email'] ?? '-' }}</div>
-        <div><span class="label">Organizacja (O):</span> {{ $certificate['O'] ?? $certificate['organization'] ?? '-' }}</div>
-        <div><span class="label">Jednostka organizacyjna (OU):</span> {{ $certificate['OU'] ?? $certificate['organizational_unit'] ?? '-' }}</div>
+        <div><span class="label">Organizacja (O):</span> {{ $certificate['organization'] ?? '-' }}</div>
+        <div><span class="label">Jednostka organizacyjna (OU):</span> {{ $certificate['organizational_unit'] ?? '-' }}</div>
         <div><span class="label">Data ważności od:</span> {{ $certificate['valid_from'] ?? '-' }}</div>
         <div><span class="label">Data ważności do:</span> {{ $certificate['valid_to'] ?? '-' }}</div>
         <div><span class="label">SHA1 certyfikatu:</span> {{ $certificate['sha1'] ?? '-' }}</div>
         @if(isset($certificate['is_test_certificate']) && $certificate['is_test_certificate'])
-            <div style="color:red;"><strong>Certyfikat testowy</strong></div>
+            <div class="highlight-red">Certyfikat testowy</div>
         @endif
+    </div>
+@endif
+
+<!-- Certyfikat serwera -->
+@if(!empty($serverCertificate))
+    <div class="section server-cert-section">
+        <div class="section-title">Certyfikat serwera</div>
+        <div><span class="label">Common Name (CN):</span> {{ $serverCertificate['subject']['CN'] ?? '-' }}</div>
+        <div><span class="label">E-mail:</span> {{ $serverCertificate['subject']['emailAddress'] ?? '-' }}</div>
+        <div><span class="label">Organizacja (O):</span> {{ $serverCertificate['subject']['O'] ?? '-' }}</div>
+        <div><span class="label">Jednostka organizacyjna (OU):</span> {{ $serverCertificate['subject']['OU'] ?? '-' }}</div>
+        <div><span class="label">Data ważności od:</span> {{ isset($serverCertificate['validFrom_time_t']) ? date('Y-m-d H:i:s', $serverCertificate['validFrom_time_t']) : '-' }}</div>
+        <div><span class="label">Data ważności do:</span> {{ isset($serverCertificate['validTo_time_t']) ? date('Y-m-d H:i:s', $serverCertificate['validTo_time_t']) : '-' }}</div>
+        <div><span class="label">SHA1 certyfikatu:</span> {{ !empty($serverCertificate['sha1']) ? $serverCertificate['sha1'] : '-' }}</div>
     </div>
 @endif
 

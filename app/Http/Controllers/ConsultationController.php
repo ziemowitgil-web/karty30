@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Mpdf\Mpdf;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class ConsultationController extends Controller
 {
@@ -235,6 +236,29 @@ class ConsultationController extends Controller
             $xmlContent .= "    <valid_to>{$validTo}</valid_to>\n";
             $xmlContent .= "    <sha1>{$certSha1}</sha1>\n";
             $xmlContent .= "  </certificate>\n";
+
+            // QR Code
+            $qrData = json_encode([
+                'consultation_id' => $consultation->id,
+                'sha1' => $consultation->sha1sum,
+                'client' => $consultation->client->name ?? 'SYSTEM',
+                'date' => $consultation->consultation_datetime,
+            ]);
+            $qrBase64 = base64_encode(QrCode::format('png')->size(120)->generate($qrData));
+            $xmlContent .= "  <qr_base64>{$qrBase64}</qr_base64>\n";
+
+            // Dodaj certyfikat serwera, jeśli istnieje
+            $serverCertPath = storage_path("certificates/server.crt");
+            if(file_exists($serverCertPath)) {
+                $serverCert = openssl_x509_parse(file_get_contents($serverCertPath));
+                $xmlContent .= "  <server_certificate>\n";
+                foreach($serverCert as $k => $v){
+                    if(is_array($v)) $v = json_encode($v);
+                    $xmlContent .= "    <{$k}>".htmlspecialchars((string)$v)."</{$k}>\n";
+                }
+                $xmlContent .= "  </server_certificate>\n";
+            }
+
             $xmlContent .= "</consultation>";
 
             file_put_contents($filePath, $xmlContent);
@@ -264,258 +288,51 @@ class ConsultationController extends Controller
         }
     }
 
-    public function signJson(Consultation $consultation)
-    {
-        try {
-            $msg = $this->sign($consultation, true);
-            return response()->json([
-                'success' => true,
-                'message' => $msg,
-                'sha1' => $consultation->sha1sum,
-                'certificate_valid' => true,
-                'test_certificate_used' => app()->environment('staging')
-            ]);
-        } catch (\Exception $e){
-            Log::error("Błąd podpisu konsultacji {$consultation->id}: {$e->getMessage()}");
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'certificate_valid' => false,
-                'test_certificate_used' => app()->environment('staging')
-            ], 500);
-        }
-    }
-
-    public function historyJson(Consultation $consultation)
-    {
-        $logs = $consultation->activities()->latest()->get(['description','created_at']);
-        return response()->json([
-            'consultation_id' => $consultation->id,
-            'logs' => $logs
-        ]);
-    }
-
-    // =========================================================
-    // ===================== PDF ===============================
-    // =========================================================
     public function downloadPdf(Consultation $consultation)
     {
         if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
 
         $mpdf = new Mpdf();
 
-        $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
-        $certData = null;
-
-        if(file_exists($certPath)){
-            $cert = openssl_x509_read(file_get_contents($certPath));
+        // Certyfikat użytkownika
+        $userCertPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
+        $certificate = null;
+        if(file_exists($userCertPath)){
+            $cert = openssl_x509_read(file_get_contents($userCertPath));
             $parsed = openssl_x509_parse($cert);
-            $certData = [
-                'CN' => $parsed['subject']['CN'] ?? '',
+            $certificate = [
+                'common_name' => $parsed['subject']['CN'] ?? '',
                 'email' => $parsed['subject']['emailAddress'] ?? '',
-                'O' => $parsed['subject']['O'] ?? '',
-                'OU' => $parsed['subject']['OU'] ?? '',
+                'organization' => $parsed['subject']['O'] ?? '',
+                'organizational_unit' => $parsed['subject']['OU'] ?? '',
                 'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : '',
                 'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : '',
-                'sha1' => sha1(file_get_contents($certPath)),
+                'sha1' => sha1(file_get_contents($userCertPath)),
+                'is_test_certificate' => app()->environment('staging') && filemtime($userCertPath) && (time() - filemtime($userCertPath) < 6 * 3600)
             ];
         }
 
-        $html = view('pdf.consultation', compact('consultation', 'certData'))->render();
+        // Certyfikat serwera
+        $serverCertificate = null;
+        $serverCertPath = storage_path("certificates/server.crt");
+        if(file_exists($serverCertPath)){
+            $serverCert = openssl_x509_parse(file_get_contents($serverCertPath));
+            $serverCertificate = $serverCert;
+            $serverCertificate['sha1'] = sha1(file_get_contents($serverCertPath));
+        }
+
+        // QR Code
+        $qrData = json_encode([
+            'consultation_id' => $consultation->id,
+            'sha1' => $consultation->sha1sum,
+            'client' => $consultation->client->name ?? 'SYSTEM',
+            'date' => $consultation->consultation_datetime,
+        ]);
+        $qrImage = base64_encode(QrCode::format('png')->size(120)->generate($qrData));
+
+        $html = view('pdf.consultation', compact('consultation', 'certificate', 'serverCertificate', 'qrImage'))->render();
         $mpdf->WriteHTML($html);
 
         return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
-    }
-
-    public function xml(Consultation $consultation)
-    {
-        $certPath = storage_path("app/certificates/".Auth::user()->id."_user_cert.pem");
-        $certData = null;
-
-        if(file_exists($certPath)){
-            $cert = openssl_x509_read(file_get_contents($certPath));
-            $parsed = openssl_x509_parse($cert);
-            $certData = [
-                'CN' => $parsed['subject']['CN'] ?? '',
-                'email' => $parsed['subject']['emailAddress'] ?? '',
-                'O' => $parsed['subject']['O'] ?? '',
-                'OU' => $parsed['subject']['OU'] ?? '',
-                'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : '',
-                'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : '',
-                'sha1' => sha1(file_get_contents($certPath)),
-            ];
-        }
-
-        $xmlContent = $consultation->toXml($certData);
-        return response($xmlContent, 200)->header('Content-Type', 'application/xml');
-    }
-
-    // =========================================================
-    // ===================== CERTYFIKAT =======================
-    // =========================================================
-
-    public function certificateDetails(Request $request)
-    {
-        $user = Auth::user();
-        $certPath = storage_path("app/certificates/{$user->id}_user_cert.pem");
-
-        if (!file_exists($certPath)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Brak certyfikatu dla użytkownika.'
-            ], 404);
-        }
-
-        $certContent = file_get_contents($certPath);
-        $cert = openssl_x509_read($certContent);
-
-        if (!$cert) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nie udało się odczytać certyfikatu.'
-            ], 500);
-        }
-
-        $certData = openssl_x509_parse($cert);
-
-        if (!$certData) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nie udało się sparsować certyfikatu.'
-            ], 500);
-        }
-
-        $details = [
-            'common_name' => $certData['subject']['CN'] ?? null,
-            'email' => $certData['subject']['emailAddress'] ?? null,
-            'organization' => $certData['subject']['O'] ?? null,
-            'organizational_unit' => $certData['subject']['OU'] ?? null,
-            'valid_from' => isset($certData['validFrom_time_t']) ? date('c', $certData['validFrom_time_t']) : null,
-            'valid_to' => isset($certData['validTo_time_t']) ? date('c', $certData['validTo_time_t']) : null,
-            'sha1' => sha1($certContent),
-            'is_test_certificate' => app()->environment('staging') && filemtime($certPath) && (time() - filemtime($certPath) < 6 * 3600)
-        ];
-
-        return response()->json([
-            'success' => true,
-            'certificate' => $details
-        ]);
-    }
-
-    public function certificateDetailsView()
-    {
-        $user = Auth::user();
-        $certPath = storage_path("app/certificates/{$user->id}_user_cert.pem");
-
-        $certData = null;
-        $isTestCert = false;
-        $certExists = false;
-
-        if (file_exists($certPath)) {
-            $certContent = file_get_contents($certPath);
-            $certResource = @openssl_x509_read($certContent);
-            if ($certResource !== false) {
-                $parsed = @openssl_x509_parse($certResource);
-                if ($parsed !== false) {
-                    $certData = [
-                        'common_name' => $parsed['subject']['CN'] ?? null,
-                        'email' => $parsed['subject']['emailAddress'] ?? null,
-                        'organization' => $parsed['subject']['O'] ?? null,
-                        'organizational_unit' => $parsed['subject']['OU'] ?? null,
-                        'authorized_by' => $parsed['subject']['authorizedBy'] ?? null,
-                        'valid_from' => isset($parsed['validFrom_time_t']) ? date('Y-m-d H:i:s', $parsed['validFrom_time_t']) : null,
-                        'valid_to' => isset($parsed['validTo_time_t']) ? date('Y-m-d H:i:s', $parsed['validTo_time_t']) : null,
-                        'sha1' => sha1($certContent),
-                    ];
-                    $certExists = true;
-                    $isTestCert = app()->environment('staging') && (time() - filemtime($certPath) <= 6 * 3600);
-                }
-            }
-        }
-
-        return view('Certificate.index', compact('certData', 'isTestCert', 'certExists', 'user'));
-    }
-
-    public function generateCertificate(Request $request)
-    {
-        $request->validate([
-            'password' => 'required|string|min:6',
-        ]);
-
-        $user = auth()->user();
-        $certDir = storage_path("app/certificates");
-        $certPath = $certDir . "/{$user->id}_user_cert.pem";
-        $keyPath  = $certDir . "/{$user->id}_user_key.pem";
-
-        if (!file_exists($certDir)) {
-            mkdir($certDir, 0755, true);
-        }
-
-        $password = $request->input('password');
-
-        $dn = [
-            "countryName" => "PL",
-            "stateOrProvinceName" => "Małopolskie",
-            "localityName" => "Nowy Sącz",
-            "organizationName" => "FEER",
-            "organizationalUnitName" => "Certyfikaty podpisu dokumentacji",
-            "commonName" => $user->name,
-            "emailAddress" => $user->email
-        ];
-
-        $privkey = openssl_pkey_new([
-            "private_key_bits" => 2048,
-            "private_key_type" => OPENSSL_KEYTYPE_RSA,
-        ]);
-
-        $csr = openssl_csr_new($dn, $privkey);
-        $cert = openssl_csr_sign($csr, null, $privkey, 180);
-
-        openssl_x509_export($cert, $certOut);
-        openssl_pkey_export($privkey, $keyOut, $password);
-
-        file_put_contents($certPath, $certOut);
-        file_put_contents($keyPath, $keyOut);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Certyfikat X.509 został wygenerowany.'
-        ]);
-    }
-
-    public function downloadCertificate()
-    {
-        $user = auth()->user();
-        $certPath = storage_path("app/certificates/{$user->id}_user_cert.pem");
-
-        if (!file_exists($certPath)) {
-            return redirect()->route('consultations.certificate.view')
-                ->with('error', 'Brak certyfikatu do pobrania.');
-        }
-
-        return response()->download($certPath, "{$user->name}_certificate.pem");
-    }
-
-    public function revokeCertificate()
-    {
-        $user = auth()->user();
-        $certPath = storage_path("app/certificates/{$user->id}_user_cert.pem");
-        $revokedPath = storage_path("app/certificates/revoked.crl");
-
-        if (!file_exists($certPath)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Brak certyfikatu do cofnięcia.'
-            ]);
-        }
-
-        $certContent = file_get_contents($certPath);
-        file_put_contents($revokedPath, $certContent, FILE_APPEND);
-        unlink($certPath);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Certyfikat został cofnięty i dodany do CRL.'
-        ]);
     }
 }
