@@ -6,6 +6,7 @@ use App\Models\AdminService;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 
 
@@ -75,6 +76,27 @@ class AdminServiceController extends Controller
         \Artisan::call('cache:clear');
 
         return back()->with('success', "Zmienna {$key} została zaktualizowana.");
+    }
+
+    public function UserList () // Lista uzytkownikow
+
+    {
+        $query = User::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('document_number', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->paginate(15)->withQueryString(); // zachowuje parametr search w paginacji
+
+        return view('AdminService.UserMgmt.index', compact('users'));
+
+
     }
 }
 

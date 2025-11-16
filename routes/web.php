@@ -46,13 +46,26 @@ Route::post('/toggle-accessible', [HomeController::class, 'toggleAccessible'])
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 /*
+/*
 |--------------------------------------------------------------------------
 | Administrator
 |--------------------------------------------------------------------------
 */
-Route::get('/log', [AdminServiceController::class, 'log'])->name('logs');
-Route::post('/log/clear', [AdminServiceController::class, 'clearLog'])->name('logs.clear');
-Route::post('/env/update', [AdminServiceController::class, 'updateEnv'])->name('env.update');
+Route::prefix('admin')->name('admin.')->group(function () {
+
+    // Logi
+    Route::get('/log', [AdminServiceController::class, 'log'])->name('logs');
+    Route::post('/log/clear', [AdminServiceController::class, 'clearLog'])->name('logs.clear');
+
+    // Aktualizacja .env
+    Route::post('/env/update', [AdminServiceController::class, 'updateEnv'])->name('env.update');
+
+    // Lista użytkowników z wyszukiwaniem
+    Route::get('/users', [AdminServiceController::class, 'UserList'])->name('users.list');
+
+  ##  Route::get('/users/{user}/edit', [AdminServiceController::class, 'editUser'])->name('users.edit');
+##    Route::delete('/users/{user}', [AdminServiceController::class, 'destroyUser'])->name('users.destroy');
+});
 
 /*
 |--------------------------------------------------------------------------
