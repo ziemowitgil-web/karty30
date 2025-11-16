@@ -45,6 +45,7 @@
                 <a href="{{ route('raport') }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white"><i class="fas fa-file-alt"></i> Raporty</a>
 
                 <a href="{{ route('consultations.certificate.view') }}" class="flex items-center gap-2 px-4 py-2 rounded-3xl bg-amber-500 hover:brightness-90 text-gray-900 font-semibold transition focus:outline-none focus:ring-2 focus:ring-yellow-400"><i class="fas fa-certificate"></i> Certyfikat</a>
+                <a href="{{ route('consultations.certificate.view') }}" class="flex items-center gap-2 px-4 py-2 rounded-3xl bg-blue-500 hover:brightness-90 text-gray-900 font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-400"><i class="fas fa-certificate"></i> Panel admina</a>
 
                 <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-white"><i class="fas fa-sign-out-alt"></i> Wyloguj</a>
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
