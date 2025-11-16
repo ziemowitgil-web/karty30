@@ -4,18 +4,11 @@
     <div class="container mx-auto p-6 max-w-4xl">
         <h1 id="pageTitle" class="text-3xl font-bold mb-6 text-gray-900">Dodaj konsultację – Kreator</h1>
 
-        @if(session('success'))
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6" role="alert">
-                {{ session('success') }}
-            </div>
-        @endif
-
         <div id="ariaMessage" class="sr-only" aria-live="polite"></div>
 
         <form id="consultationWizard" action="{{ route('consultations.store') }}" method="POST"
               class="space-y-6 bg-white p-6 rounded shadow" role="form" aria-labelledby="pageTitle" novalidate>
             @csrf
-            <input type="hidden" name="status" value="draft">
             <input type="hidden" name="duration_minutes" id="duration_minutes_hidden">
 
             {{-- Krok 1: Tryb konsultacji --}}
@@ -34,7 +27,7 @@
                 </div>
             </fieldset>
 
-            {{-- Krok 2: Rezerwacja lub klient --}}
+            {{-- Krok 2: Wybór rezerwacji lub klienta --}}
             <fieldset class="wizard-step hidden" data-step="2">
                 <legend class="text-xl font-semibold mb-4">2. Wybierz rezerwację lub klienta</legend>
 
@@ -129,7 +122,7 @@
 
                 <div class="flex justify-between mt-6">
                     <button type="button" class="prevBtn bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500 focus:ring-2 focus:ring-gray-300">Wstecz</button>
-                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 focus:ring-2 focus:ring-blue-300">Zapisz konsultację</button>
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 focus:ring-2 focus:ring-blue-300">Zapisz i podpisz konsultację</button>
                 </div>
             </fieldset>
         </form>
@@ -154,25 +147,25 @@
 
             const modeBtns = document.querySelectorAll('.modeBtn');
 
-            function showStep(index) {
-                steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
+            function showStep(index){
+                steps.forEach((step,i)=>step.classList.toggle('hidden', i!==index));
                 steps[index].querySelector('legend').focus();
                 if(ariaMessage) ariaMessage.textContent = `Krok ${index+1} z ${steps.length}`;
                 currentStep = index;
             }
 
-            nextBtns.forEach(btn => btn.addEventListener('click', async () => {
+            nextBtns.forEach(btn=>btn.addEventListener('click', async ()=>{
                 if(await validateStep(currentStep)) showStep(currentStep+1);
             }));
 
-            prevBtns.forEach(btn => btn.addEventListener('click', () => showStep(currentStep-1)));
+            prevBtns.forEach(btn=>btn.addEventListener('click', ()=>showStep(currentStep-1)));
             showStep(0);
 
             // Tryby konsultacji
-            modeBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
+            modeBtns.forEach(btn=>{
+                btn.addEventListener('click', ()=>{
                     const mode = btn.dataset.mode;
-                    modeBtns.forEach(b => {
+                    modeBtns.forEach(b=>{
                         b.classList.remove('bg-blue-600','text-white');
                         b.classList.add('bg-gray-200','text-gray-800');
                         b.setAttribute('aria-pressed','false');
@@ -180,99 +173,131 @@
                     btn.classList.add('bg-blue-600','text-white');
                     btn.setAttribute('aria-pressed','true');
 
-                    if(mode === 'reservation'){
-                        document.getElementById('reservationField').style.display = 'block';
-                        clientSelect.disabled = true;
+                    if(mode==='reservation'){
+                        document.getElementById('reservationField').style.display='block';
+                        clientSelect.disabled=true;
                     } else {
-                        document.getElementById('reservationField').style.display = 'none';
-                        clientSelect.disabled = false;
+                        document.getElementById('reservationField').style.display='none';
+                        clientSelect.disabled=false;
                     }
                 });
             });
 
             // Auto-fill po wyborze rezerwacji
-            scheduleSelect?.addEventListener('change', () => {
+            scheduleSelect?.addEventListener('change', ()=>{
                 const selected = scheduleSelect.options[scheduleSelect.selectedIndex];
                 if(!selected.value) return;
                 clientSelect.value = selected.dataset.client;
                 consultationDate.value = selected.dataset.date;
                 consultationTime.value = selected.dataset.time;
-                durationHours.value = (selected.dataset.duration / 60).toFixed(2);
+                durationHours.value = (selected.dataset.duration/60).toFixed(2);
             });
 
             // Konwersja godzin na minuty
-            durationHours.addEventListener('input', () => {
-                const hours = parseFloat(durationHours.value);
-                durationMinutesHidden.value = !isNaN(hours) ? Math.round(hours*60) : '';
+            durationHours.addEventListener('input', ()=>{
+                const hours=parseFloat(durationHours.value);
+                durationMinutesHidden.value=!isNaN(hours)?Math.round(hours*60):'';
             });
 
             // Walidacja kroków
-            async function validateStep(step) {
-                let valid = true;
-
-                // Krok 2: klient
-                if(step === 1){
+            async function validateStep(step){
+                let valid=true;
+                if(step===1){
                     if(!clientSelect.value){
-                        const err = document.getElementById('clientError');
-                        err.textContent = 'Wybierz klienta.';
+                        const err=document.getElementById('clientError');
+                        err.textContent='Wybierz klienta.';
                         err.classList.remove('sr-only');
-                        valid = false;
+                        valid=false;
                     } else document.getElementById('clientError').classList.add('sr-only');
                 }
-
-                // Krok 3: data, czas, czas trwania i dostępność
-                if(step === 2){
-                    let hasError = false;
-
+                if(step===2){
+                    let hasError=false;
                     if(!consultationDate.value){
-                        document.getElementById('dateError').textContent = 'Podaj datę konsultacji.';
+                        document.getElementById('dateError').textContent='Podaj datę konsultacji.';
                         document.getElementById('dateError').classList.remove('sr-only');
-                        hasError = true;
+                        hasError=true;
                     } else document.getElementById('dateError').classList.add('sr-only');
 
                     if(!consultationTime.value){
-                        document.getElementById('timeError').textContent = 'Podaj godzinę rozpoczęcia.';
+                        document.getElementById('timeError').textContent='Podaj godzinę rozpoczęcia.';
                         document.getElementById('timeError').classList.remove('sr-only');
-                        hasError = true;
+                        hasError=true;
                     } else document.getElementById('timeError').classList.add('sr-only');
 
-                    const hours = parseFloat(durationHours.value);
-                    if(!hours || hours <= 0){
-                        document.getElementById('durationError').textContent = 'Podaj poprawny czas trwania.';
+                    const hours=parseFloat(durationHours.value);
+                    if(!hours||hours<=0){
+                        document.getElementById('durationError').textContent='Podaj poprawny czas trwania.';
                         document.getElementById('durationError').classList.remove('sr-only');
-                        hasError = true;
+                        hasError=true;
                     } else document.getElementById('durationError').classList.add('sr-only');
 
                     if(!hasError){
-                        // Sprawdzenie dostępności klienta przez AJAX
                         const response = await fetch("{{ route('schedules.checkAvailability') }}", {
                             method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "X-CSRF-TOKEN": "{{ csrf_token() }}"
-                            },
+                            headers: {"Content-Type": "application/json","X-CSRF-TOKEN": "{{ csrf_token() }}"},
                             body: JSON.stringify({
                                 client_id: clientSelect.value,
-                                start_time: consultationDate.value + ' ' + consultationTime.value,
+                                start_time: consultationDate.value+' '+consultationTime.value,
                                 duration_minutes: Math.round(hours*60)
                             })
                         });
-
-                        const data = await response.json();
+                        const data=await response.json();
                         if(!data.available){
-                            availabilityError.textContent = 'Klient ma już termin w tym czasie.';
+                            availabilityError.textContent='Klient ma już termin w tym czasie.';
                             availabilityError.classList.remove('sr-only');
-                            valid = false;
-                        } else {
-                            availabilityError.classList.add('sr-only');
-                        }
+                            valid=false;
+                        } else availabilityError.classList.add('sr-only');
                     }
-
-                    valid = !hasError && valid;
+                    valid=!hasError&&valid;
                 }
-
                 return valid;
             }
+
+            // Submit – zapis + automatyczny podpis
+            const form=document.getElementById('consultationWizard');
+            form.addEventListener('submit', async e=>{
+                e.preventDefault();
+                durationMinutesHidden.value=Math.round(parseFloat(durationHours.value)*60);
+
+                const formData=new FormData(form);
+
+                // Sprawdzenie dostępności klienta przed zapisem
+                const availabilityRes=await fetch("{{ route('schedules.checkAvailability') }}", {
+                    method:'POST',
+                    headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'},
+                    body: JSON.stringify({
+                        client_id: clientSelect.value,
+                        start_time: consultationDate.value+' '+consultationTime.value,
+                        duration_minutes: parseInt(durationMinutesHidden.value)
+                    })
+                });
+                const availabilityData=await availabilityRes.json();
+                if(!availabilityData.available){
+                    availabilityError.textContent='Klient ma już termin w tym czasie.';
+                    availabilityError.classList.remove('sr-only');
+                    if(ariaMessage) ariaMessage.textContent='Klient ma już termin w tym czasie.';
+                    return;
+                } else availabilityError.classList.add('sr-only');
+
+                // Zapis konsultacji
+                const saveRes=await fetch(form.action, {
+                    method:'POST',
+                    headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'},
+                    body:formData
+                });
+                const saveData=await saveRes.json();
+                if(saveData.success){
+                    // Automatyczny podpis
+                    const signRes=await fetch(`/consultations/${saveData.consultation_id}/sign`, {
+                        method:'POST',
+                        headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'}
+                    });
+                    const signData=await signRes.json();
+                    if(signData.success){
+                        window.location.href="{{ route('consultations.index') }}";
+                    } else alert('Błąd podpisu: '+signData.message);
+                } else alert('Błąd zapisu: '+saveData.message);
+            });
         });
     </script>
 @endsection
