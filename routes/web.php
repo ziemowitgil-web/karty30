@@ -195,7 +195,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{consultation}', [ConsultationController::class, 'destroy'])->name('destroy');
 
         // Podpisy i historia
-        Route::post('/{consultation}/sign', [ConsultationController::class, 'signJson'])->name('sign');
+        Route::post('/{consultation}/sign', [ConsultationController::class, 'sign'])->name('sign');
         Route::get('/{consultation}/history-json', [ConsultationController::class, 'historyJson'])->name('history.json');
         Route::get('/{consultation}/history', [ConsultationController::class, 'history'])->name('history');
         Route::get('/{consultation}/pdf', [ConsultationController::class, 'downloadPdf'])->name('pdf');
