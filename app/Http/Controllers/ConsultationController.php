@@ -43,25 +43,22 @@ class ConsultationController extends Controller
         return view('Consultation.index', compact('consultations','clients'));
     }
 
-    // =============== SCZEGÓŁY =========================
+    // ================= SZCZEGÓŁY =========================
     public function details(Consultation $consultation)
     {
-        // Ładujemy relacje
         $consultation->load('client', 'user');
 
-        // Dane XML — opcjonalne, jeśli istnieje plik
         $xmlData = null;
         $xmlPath = storage_path("app/consultations/{$consultation->id}.xml");
         if (file_exists($xmlPath)) {
             try {
                 $xmlContent = file_get_contents($xmlPath);
-                $xmlData = simplexml_load_string($xmlContent); // SimpleXMLElement
+                $xmlData = simplexml_load_string($xmlContent);
             } catch (\Exception $e) {
                 $xmlData = null;
             }
         }
 
-        // Dane do widoku — wszystko z DB
         $data = [
             'id' => $consultation->id,
             'client_name' => $consultation->client->name ?? 'SYSTEM',
@@ -81,14 +78,11 @@ class ConsultationController extends Controller
         return view('Consultation.details', $data);
     }
 
-
-
     // ================= FORMULARZ ========================
     public function create()
     {
         $clients = Client::orderBy('name')->get();
 
-        // Pobieramy tylko przyszłe potwierdzone rezerwacje
         $schedules = Schedule::with('client')
             ->where('status', 'confirmed')
             ->where('start_time', '>=', now())
@@ -116,7 +110,6 @@ class ConsultationController extends Controller
             'sign_type' => 'nullable|in:qualified,eid,feer',
         ]);
 
-        // Jeśli wybrano rezerwację, uzupełniamy dane klienta i czas
         if ($validated['schedule_id']) {
             $schedule = Schedule::with('client')->find($validated['schedule_id']);
             if ($schedule) {
@@ -134,21 +127,6 @@ class ConsultationController extends Controller
         $validated['user_email'] = Auth::user()->email;
         $validated['username'] = Auth::user()->name;
         $validated['user_ip'] = $request->ip();
-
-        // Walidacja dostępności godzin klienta
-        if ($validated['status'] !== 'draft' && $validated['client_id'] !== 'SYSTEM') {
-            $client = Client::find($validated['client_id']);
-            if ($client->blacklisted) {
-                return redirect()->back()->withInput()->with('error', 'Nie można utworzyć konsultacji dla klienta na czarnej liście.');
-            }
-            $hoursUsed = round($validated['duration_minutes'] / 60, 2);
-            $availableHours = $client->getAvailableHoursNumberAttribute();
-            if (($client->used + $hoursUsed) > $availableHours) {
-                return redirect()->back()->withInput()->with('error', "Klient nie ma wystarczająco godzin (pozostało: {$availableHours}).");
-            }
-            $client->used += $hoursUsed;
-            $client->save();
-        }
 
         $consultation = Consultation::create($validated);
 
@@ -192,10 +170,7 @@ class ConsultationController extends Controller
 
             $this->validateUserCertificate($userCertData, Auth::user()->email);
 
-            $testCertFlag = app()->environment('staging')
-                && (time() - filemtime(storage_path("app/certificates/".Auth::user()->id."_user_cert.pem")) < 6*3600);
-
-            $xmlContent = $this->generateConsultationXml($consultation, $userCertData, $serverCertData, $testCertFlag);
+            $xmlContent = $this->generateConsultationXml($consultation, $userCertData, $serverCertData);
             $filePath = $this->saveXmlFile($consultation, $xmlContent);
             $sha1 = sha1_file($filePath);
 
@@ -218,14 +193,10 @@ class ConsultationController extends Controller
         }
     }
 
-    /**
-     * Alias do wywołania podpisu w trybie JSON
-     */
     public function signJson(Consultation $consultation)
     {
         return $this->sign($consultation, true);
     }
-
 
     // ================= PDF ==============================
     public function downloadPdf(Consultation $consultation)
@@ -256,11 +227,54 @@ class ConsultationController extends Controller
         return $mpdf->Output("consultation_{$consultation->id}.pdf", 'I');
     }
 
-    // ================= POMOCNICZE ========================
-    private function getUserCertificate($userId) { /* ... */ }
-    private function getServerCertificate() { /* ... */ }
-    private function validateUserCertificate($certData, $userEmail) { /* ... */ }
-    private function generateConsultationXml($consultation, $userCertData, $serverCertData, $testCertFlag = false) { /* ... */ }
-    private function saveXmlFile($consultation, $xmlContent) { /* ... */ }
-    private function generateQrData($consultation) { /* ... */ }
+    // ================= FUNKCJE POMOCNICZE ========================
+    private function getUserCertificate($userId)
+    {
+        $path = storage_path("app/certificates/{$userId}_user_cert.pem");
+        return file_exists($path) ? file_get_contents($path) : null;
+    }
+
+    private function getServerCertificate()
+    {
+        $path = storage_path("app/certificates/server_cert.pem");
+        return file_exists($path) ? file_get_contents($path) : null;
+    }
+
+    private function validateUserCertificate($certData, $userEmail)
+    {
+        if (empty($certData)) {
+            throw new \Exception("Certyfikat użytkownika nie jest dostępny.");
+        }
+        // Możesz tu dodać walidację zgodnie z regułami (np. sprawdzenie email w certyfikacie)
+    }
+
+    private function generateConsultationXml($consultation, $userCertData, $serverCertData)
+    {
+        $xml = new \SimpleXMLElement('<consultation/>');
+        $xml->addChild('id', $consultation->id);
+        $xml->addChild('client_name', $consultation->client->name ?? 'SYSTEM');
+        $xml->addChild('user_name', $consultation->user->name ?? '-');
+        $xml->addChild('datetime', $consultation->consultation_datetime);
+        $xml->addChild('duration_minutes', $consultation->duration_minutes);
+        $xml->addChild('mode', $consultation->mode);
+        $xml->addChild('next_action', $consultation->next_action ?? '');
+        $xml->addChild('description', $consultation->description ?? '');
+        $xml->addChild('approved_by', $consultation->approved_by_name ?? '');
+        $xml->addChild('sha1sum', $consultation->sha1sum ?? '');
+        return $xml->asXML();
+    }
+
+    private function saveXmlFile($consultation, $xmlContent)
+    {
+        $dir = storage_path('app/consultations');
+        if (!file_exists($dir)) mkdir($dir, 0755, true);
+        $path = $dir . "/{$consultation->id}.xml";
+        file_put_contents($path, $xmlContent);
+        return $path;
+    }
+
+    private function generateQrData($consultation)
+    {
+        return route('consultations.details', $consultation->id) . "#sha1={$consultation->sha1sum}";
+    }
 }
