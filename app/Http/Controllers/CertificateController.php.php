@@ -31,6 +31,24 @@ class CertificateController extends Controller
     }
 
     /**
+     * Wyświetla główny widok zarządzania certyfikatami dla zalogowanego użytkownika.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function indexView()
+    {
+        $userId = auth()->id();
+        $certPath = $this->getUserCertificate($userId);
+        $keyPath = $this->getUserKey($userId);
+
+        return view('certifications.index', [
+            'certPath' => $certPath,
+            'keyPath' => $keyPath,
+        ]);
+    }
+
+
+    /**
      * Widok szczegółów certyfikatu użytkownika
      */
     public function certificateDetailsView()
