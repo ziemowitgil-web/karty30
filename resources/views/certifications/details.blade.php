@@ -1,24 +1,36 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto p-6 max-w-xl">
-        <h1 class="text-2xl font-bold mb-4">Szczegóły certyfikatu</h1>
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6 space-y-6">
 
-        <div class="mb-4">
-            <p><strong>Certyfikat:</strong> {{ basename($certPath) }}</p>
-            <p><strong>Klucz prywatny:</strong> {{ basename($keyPath) }}</p>
+        <h1 class="text-xl font-semibold text-gray-900">Szczegóły certyfikatu</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p><strong>CN:</strong> {{ $certInfo['subject']['CN'] ?? 'Nieznany' }}</p>
+                <p><strong>O:</strong> {{ $certInfo['subject']['O'] ?? '-' }}</p>
+                <p><strong>Email:</strong> {{ $certInfo['subject']['emailAddress'] ?? '-' }}</p>
+                <p><strong>Ważny od:</strong> {{ isset($certInfo['validFrom_time_t']) ? date('d.m.Y', $certInfo['validFrom_time_t']) : '-' }}</p>
+                <p><strong>Ważny do:</strong> {{ isset($certInfo['validTo_time_t']) ? date('d.m.Y', $certInfo['validTo_time_t']) : '-' }}</p>
+            </div>
+            <div class="flex flex-col gap-2">
+                <a href="{{ route('certificates.download', ['userId' => Auth::user()->id, 'type' => 'cert']) }}"
+                   class="px-3 py-1 bg-green-100 text-green-800 rounded-xl hover:bg-green-200 transition">Pobierz certyfikat</a>
+                <a href="{{ route('certificates.download', ['userId' => Auth::user()->id, 'type' => 'key']) }}"
+                   class="px-3 py-1 bg-teal-100 text-teal-800 rounded-xl hover:bg-teal-200 transition">Pobierz klucz</a>
+                <form method="POST" action="{{ route('certificates.revoke', ['userId' => Auth::user()->id]) }}">
+                    @csrf
+                    <button type="submit"
+                            class="px-3 py-1 bg-red-100 text-red-800 rounded-xl hover:bg-red-200 transition"
+                            onclick="return confirm('Czy na pewno chcesz cofnąć certyfikat?')">Cofnij certyfikat</button>
+                </form>
+            </div>
         </div>
 
-        <div class="flex gap-4">
-            <a href="{{ route('certificates.download', ['userId' => auth()->id(), 'type' => 'cert']) }}"
-               class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                Pobierz certyfikat
-            </a>
-
-            <a href="{{ route('certificates.download', ['userId' => auth()->id(), 'type' => 'key']) }}"
-               class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
-                Pobierz klucz prywatny
-            </a>
+        <div class="overflow-x-auto bg-gray-50 p-3 rounded-xl">
+            <h2 class="font-semibold text-gray-800 mb-2">PEM certyfikatu</h2>
+            <pre class="text-xs text-gray-700">{{ File::get($certPath) }}</pre>
         </div>
+
     </div>
 @endsection

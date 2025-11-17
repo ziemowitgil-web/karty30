@@ -1,30 +1,26 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto p-6 max-w-xl">
-        <h1 class="text-2xl font-bold mb-4">Generowanie certyfikatu X.509</h1>
+    <div class="max-w-lg mx-auto bg-white rounded-2xl shadow p-6">
 
-        @if(session('success'))
-            <div class="bg-green-100 text-green-800 p-3 mb-4 rounded">{{ session('success') }}</div>
-        @endif
+        <h1 class="text-xl font-semibold text-gray-900 mb-4">Generowanie certyfikatu</h1>
 
-        <form method="POST" action="{{ route('certificates.generate.post') }}">
+        <form action="{{ route('certificates.generate.post', ['userId' => Auth::user()->id]) }}" method="POST">
             @csrf
 
             <div class="mb-4">
-                <label for="key_password" class="block font-medium mb-1">
-                    Hasło do certyfikatu (inne niż hasło konta)
-                </label>
+                <label for="key_password" class="block text-gray-700 font-medium mb-2">Hasło do klucza prywatnego</label>
                 <input type="password" name="key_password" id="key_password"
-                       class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500"
+                       class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                        required minlength="6">
                 @error('key_password')
-                <p class="text-red-600 mt-1">{{ $message }}</p>
+                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                 @enderror
             </div>
 
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Generuj certyfikat
+            <button type="submit"
+                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">
+                Wygeneruj certyfikat
             </button>
         </form>
     </div>

@@ -8,12 +8,16 @@ use App\Models\Consultation;
 use App\Models\Schedule;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Support\Facades\Redis;
+use App\Http\Controllers\CertificateController;
 
 class HomeController extends Controller
 {
-    public function __construct()
+    protected CertificateController $certificateController;
+
+    public function __construct(CertificateController $certificateController)
     {
         $this->middleware('auth');
+        $this->certificateController = $certificateController;
     }
 
     public function index(Request $request)
@@ -32,7 +36,7 @@ class HomeController extends Controller
                 $redisStatus = "Błąd połączenia z Redis! Kolejkowanie może nie działać.";
             }
         } else {
-            $redisStatus = 'Błąd połączenia - blokada. Tryb testowy REDIS nie zbiera danych sesji. ';
+            $redisStatus = 'Błąd połączenia - blokada. Tryb testowy REDIS nie zbiera danych sesji.';
         }
 
         // --- LOG DO ACTIVITY ---
@@ -84,6 +88,9 @@ class HomeController extends Controller
             ->orderBy('start_time')
             ->get();
 
+        // --- STATUS CERTYFIKATU ---
+        $userCertificate = $this->certificateController->getUserCertificate($user->id);
+
         // --- TRYB DOSTĘPNOŚCI ---
         if ($request->has('accessible')) {
             if ($request->boolean('accessible')) {
@@ -97,7 +104,7 @@ class HomeController extends Controller
         $view = $accessible ? 'home2' : 'home';
         $hasWebAuthnKeys = $user->hasWebauthnKey();
 
-        // --- PRZEKAZANIE STATUSU REDIS DO WIDOKU ---
+        // --- ZWRÓCENIE WIDOKU Z DANYMI ---
         return view($view, compact(
             'user',
             'stats',
@@ -106,7 +113,8 @@ class HomeController extends Controller
             'weekSchedules',
             'hasWebAuthnKeys',
             'redisStatus',
-            'testMode'
+            'testMode',
+            'userCertificate' // status certyfikatu w widoku
         ));
     }
 

@@ -3,55 +3,42 @@
 @section('content')
     <div class="space-y-6">
 
-        {{-- Powitanie użytkownika --}}
-        <section class="bg-white rounded-2xl shadow p-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        {{-- INFO O UŻYTKOWNIKU I CERTYFIKACIE --}}
+        <section class="bg-white rounded-2xl shadow p-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4" aria-label="Informacje o użytkowniku">
             <div class="flex items-center gap-3">
                 <div class="bg-blue-100 text-blue-700 rounded-full w-12 h-12 flex items-center justify-center text-xl">
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <p class="font-semibold text-gray-900">{{ Auth::user()->name }}</p>
-                    <p class="text-gray-700 text-sm">{{ Auth::user()->email }}</p>
+                    <p class="font-semibold text-gray-900">{{ $userCertificate['CN'] ?? $user->name }}</p>
+                    <p class="text-gray-700 text-sm">Organizacja: {{ $userCertificate['O'] ?? 'Brak danych' }}</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                @php
-                    $userId = Auth::id();
-                    $certPath = config('certifications.path') . '/' . $userId . '_user_cert.pem';
-                    $certExists = file_exists($certPath);
-                    $certCN = 'Brak certyfikatu';
-                    $certValidUntil = null;
-                    $certStatus = 'Brak';
-
-                    if($certExists){
-                        $certContent = file_get_contents($certPath);
-                        $certInfo = openssl_x509_parse($certContent);
-                        $certCN = $certInfo['subject']['CN'] ?? 'Nieznany użytkownik';
-                        if(isset($certInfo['validTo_time_t'])){
-                            $certValidUntil = date('d.m.Y', $certInfo['validTo_time_t']);
-                            $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
-                            $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
-                        }
-                    }
-                @endphp
-
-                @if($certExists)
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                    @if($certStatus === 'Aktywny') bg-green-100 text-green-800
-                    @else bg-red-100 text-red-800 @endif">
-                    <i class="fas fa-certificate mr-1"></i> {{ $certStatus }}
-                        @if($certStatus === 'Aktywny' && $certValidUntil) do {{ $certValidUntil }} @endif
+                @if(!empty($userCertificate))
+                    @php
+                        $status = $userCertificate['status'] ?? 'Brak';
+                        $validUntil = $userCertificate['valid_until'] ?? null;
+                        $badgeColor = match($status) {
+                            'Aktywny' => 'green',
+                            'Wygasł' => 'red',
+                            default => 'gray'
+                        };
+                    @endphp
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-{{ $badgeColor }}-100 text-{{ $badgeColor }}-800">
+                    <i class="fas fa-certificate mr-1"></i>
+                    Certyfikat: {{ $status }} @if($status === 'Aktywny' && $validUntil) do {{ $validUntil }} @endif
                 </span>
                 @else
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                     <i class="fas fa-ban mr-1"></i> Brak certyfikatu
                 </span>
                 @endif
             </div>
         </section>
 
-        {{-- Szybkie akcje --}}
-        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {{-- SZYBKIE AKCJE --}}
+        <section aria-label="Szybkie akcje" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             @php
                 $tiles = [
                     ['route'=>'consultations.create', 'color'=>'blue', 'icon'=>'fa-stethoscope', 'label'=>'Nowa konsultacja'],
@@ -75,22 +62,21 @@
             @endforeach
         </section>
 
-        {{-- Informacja o certyfikacie --}}
-        <section class="bg-white rounded-2xl shadow p-6">
+        {{-- INFORMACJE O PRODUKCJI / CERTYFIKACIE --}}
+        <section class="bg-white rounded-2xl shadow p-6" aria-label="Informacje o certyfikacie">
             <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <i class="fas fa-info-circle text-yellow-600"></i> Informacje o certyfikacie
             </h2>
             <p class="text-gray-700 leading-snug">
-                W wersji produkcyjnej wydanie certyfikatu wymaga podania danych dokumentu potwierdzającego kwalifikacje.
-                Możesz samodzielnie wygenerować certyfikat w zakładce
-                <a href="{{ route('certificates.index') }}" class="text-blue-600 hover:underline">Zarządzaj certyfikatem</a>.
+                W <strong>wersji produkcyjnej</strong> do wydania certyfikatu oraz pełnej obsługi systemu wymagane będzie potwierdzenie kwalifikacji dokumentem.
+                Możesz zarządzać swoim certyfikatem w zakładce
+                <a href="{{ route('certificates.index') }}" class="text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400">Certyfikaty</a>.
             </p>
         </section>
 
-        {{-- Rezerwacje dzisiaj i na tydzień --}}
+        {{-- REZERWACJE --}}
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            {{-- Dzisiejsze rezerwacje --}}
+            {{-- DZISIEJSZE --}}
             <div class="bg-white border border-gray-200 rounded-2xl shadow p-5">
                 <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <i class="fas fa-calendar-day text-blue-600"></i> Dzisiejsze rezerwacje
@@ -113,10 +99,14 @@
                                     <td class="px-3 py-2 text-gray-800">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
                                     <td class="px-3 py-2">
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                        @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
-                                        @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
-                                        @else bg-blue-100 text-blue-800 @endif">
+                                        @php
+                                            $statusClass = match($schedule->status_label) {
+                                                'Zatwierdzony' => 'bg-green-100 text-green-800',
+                                                'Anulowany' => 'bg-red-100 text-red-800',
+                                                default => 'bg-blue-100 text-blue-800'
+                                            };
+                                        @endphp
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
                                         {{ $schedule->status_label }}
                                     </span>
                                     </td>
@@ -128,7 +118,7 @@
                 @endif
             </div>
 
-            {{-- Najbliższy tydzień --}}
+            {{-- NAJBLIŻSZY TYDZIEŃ --}}
             <div class="bg-white border border-gray-200 rounded-2xl shadow p-5">
                 <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <i class="fas fa-calendar-week text-green-600"></i> Najbliższe 7 dni
@@ -153,10 +143,14 @@
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
                                     <td class="px-3 py-2">
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                        @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
-                                        @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
-                                        @else bg-blue-100 text-blue-800 @endif">
+                                        @php
+                                            $statusClass = match($schedule->status_label) {
+                                                'Zatwierdzony' => 'bg-green-100 text-green-800',
+                                                'Anulowany' => 'bg-red-100 text-red-800',
+                                                default => 'bg-blue-100 text-blue-800'
+                                            };
+                                        @endphp
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
                                         {{ $schedule->status_label }}
                                     </span>
                                     </td>
@@ -167,8 +161,6 @@
                     </div>
                 @endif
             </div>
-
         </section>
-
     </div>
 @endsection
