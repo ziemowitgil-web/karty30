@@ -1,53 +1,46 @@
 @extends('layouts.app')
 
 @section('content')
-    @php
-        $certDir = storage_path('app/certificates');
-        $certFile = $certDir . '/' . Auth::user()->id . '_user_cert.pem';
-        $certExists = file_exists($certFile);
-
-        $certCN = 'Brak certyfikatu';
-        $certOrg = null;
-        $certValidUntil = null;
-        $certExpiringSoon = false;
-        $certStatus = 'Brak';
-
-        if ($certExists) {
-            $certContent = file_get_contents($certFile);
-            $certInfo = openssl_x509_parse($certContent);
-            $certCN = $certInfo['subject']['CN'] ?? 'Nieznany użytkownik';
-            $certOrg = $certInfo['subject']['O'] ?? 'Brak danych o organizacji';
-            if (isset($certInfo['validTo_time_t'])) {
-                $certValidUntil = date('d.m.Y', $certInfo['validTo_time_t']);
-                $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
-                $certExpiringSoon = $daysLeft <= 10;
-                $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
-            }
-        }
-    @endphp
-
     <div class="space-y-6">
 
-        {{-- INFO O ZALOGOWANYM UŻYTKOWNIKU --}}
-        <section class="bg-white rounded-2xl shadow p-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4" aria-label="Informacje o użytkowniku">
+        {{-- Powitanie użytkownika --}}
+        <section class="bg-white rounded-2xl shadow p-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="bg-blue-100 text-blue-700 rounded-full w-12 h-12 flex items-center justify-center text-xl">
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <p class="font-semibold text-gray-900">{{ $certCN }}</p>
-                    <p class="text-gray-700 text-sm">Organizacja: {{ $certOrg }}</p>
+                    <p class="font-semibold text-gray-900">{{ Auth::user()->name }}</p>
+                    <p class="text-gray-700 text-sm">{{ Auth::user()->email }}</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                @php
+                    $userId = Auth::id();
+                    $certPath = config('certifications.path') . '/' . $userId . '_user_cert.pem';
+                    $certExists = file_exists($certPath);
+                    $certCN = 'Brak certyfikatu';
+                    $certValidUntil = null;
+                    $certStatus = 'Brak';
+
+                    if($certExists){
+                        $certContent = file_get_contents($certPath);
+                        $certInfo = openssl_x509_parse($certContent);
+                        $certCN = $certInfo['subject']['CN'] ?? 'Nieznany użytkownik';
+                        if(isset($certInfo['validTo_time_t'])){
+                            $certValidUntil = date('d.m.Y', $certInfo['validTo_time_t']);
+                            $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
+                            $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
+                        }
+                    }
+                @endphp
+
                 @if($certExists)
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                     @if($certStatus === 'Aktywny') bg-green-100 text-green-800
                     @else bg-red-100 text-red-800 @endif">
-                    <i class="fas fa-certificate mr-1"></i> Certyfikat: {{ $certStatus }}
-                        @if($certStatus === 'Aktywny' && $certValidUntil)
-                            do {{ $certValidUntil }}
-                        @endif
+                    <i class="fas fa-certificate mr-1"></i> {{ $certStatus }}
+                        @if($certStatus === 'Aktywny' && $certValidUntil) do {{ $certValidUntil }} @endif
                 </span>
                 @else
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
@@ -57,8 +50,8 @@
             </div>
         </section>
 
-        {{-- SZYBKIE AKCJE --}}
-        <section aria-label="Szybkie akcje" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {{-- Szybkie akcje --}}
+        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             @php
                 $tiles = [
                     ['route'=>'consultations.create', 'color'=>'blue', 'icon'=>'fa-stethoscope', 'label'=>'Nowa konsultacja'],
@@ -66,7 +59,7 @@
                     ['route'=>'clients.create', 'color'=>'green', 'icon'=>'fa-user-plus', 'label'=>'Dodaj klienta'],
                     ['route'=>'clients.index', 'color'=>'teal', 'icon'=>'fa-users', 'label'=>'Lista klientów'],
                     ['route'=>'raport', 'color'=>'gray', 'icon'=>'fa-file-alt', 'label'=>'Raporty'],
-                    ['route'=>'consultations.certificate.view', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Certyfikat'],
+                    ['route'=>'certificates.index', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Certyfikat'],
                 ];
             @endphp
 
@@ -82,22 +75,22 @@
             @endforeach
         </section>
 
-        {{-- INFORMACJA O PRODUKCJI / CERTYFIKACIE --}}
-        <section class="bg-white rounded-2xl shadow p-6" aria-label="Informacje o certyfikacie">
+        {{-- Informacja o certyfikacie --}}
+        <section class="bg-white rounded-2xl shadow p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <i class="fas fa-info-circle text-yellow-600"></i> Informacje o certyfikacie
             </h2>
             <p class="text-gray-700 leading-snug">
-                W <strong>wersji produkcyjnej</strong> do wydania certyfikatu oraz pełnej obsługi systemu będzie wymagane podanie danych dokumentu potwierdzającego kwalifikacje.
-                Mimo że certyfikaty wydaje Ziemowit Gil, możesz samodzielnie wygenerować certyfikat w zakładce
-                <a href="{{ route('consultations.certificate.view') }}" class="text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400">Zarządzaj certyfikatem</a>.
+                W wersji produkcyjnej wydanie certyfikatu wymaga podania danych dokumentu potwierdzającego kwalifikacje.
+                Możesz samodzielnie wygenerować certyfikat w zakładce
+                <a href="{{ route('certificates.index') }}" class="text-blue-600 hover:underline">Zarządzaj certyfikatem</a>.
             </p>
         </section>
 
-        {{-- REZERWACJE --}}
+        {{-- Rezerwacje dzisiaj i na tydzień --}}
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            {{-- DZISIEJSZE REZERWACJE --}}
+            {{-- Dzisiejsze rezerwacje --}}
             <div class="bg-white border border-gray-200 rounded-2xl shadow p-5">
                 <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <i class="fas fa-calendar-day text-blue-600"></i> Dzisiejsze rezerwacje
@@ -135,7 +128,7 @@
                 @endif
             </div>
 
-            {{-- NAJBLIŻSZY TYDZIEŃ --}}
+            {{-- Najbliższy tydzień --}}
             <div class="bg-white border border-gray-200 rounded-2xl shadow p-5">
                 <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <i class="fas fa-calendar-week text-green-600"></i> Najbliższe 7 dni
