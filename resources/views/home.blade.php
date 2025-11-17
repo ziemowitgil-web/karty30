@@ -42,7 +42,7 @@
                     <i class="fas fa-ban mr-1"></i> Brak certyfikatu
                 </span>
 
-                    <a href="{{ route('certificates.generate') }}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200">
+                    <a href="#" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200">
                         <i class="fas fa-plus mr-1"></i> Wygeneruj certyfikat
                     </a>
                 @endif
