@@ -2,106 +2,207 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Config;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Kontroler odpowiedzialny za generowanie, obsługę i walidację
+ * certyfikatów X.509 użytkowników.
+ *
+ * Certyfikaty i klucze przechowywane są w katalogu określonym w
+ * config/certifications.php (domyślnie /app/certifications).
+ */
 class CertificateController extends Controller
 {
+    /** @var string Ścieżka do katalogu z certyfikatami */
+    protected string $path;
+
+    /** @var array Domyślne dane DN (Distinguished Name) dla certyfikatów */
+    protected array $dn;
+
+    /** @var int Liczba dni ważności certyfikatu */
+    protected int $validDays;
+
+    /**
+     * Konstruktor kontrolera.
+     * Inicjalizuje ścieżkę, domyślny DN i dni ważności z konfiguracji.
+     * Tworzy katalog certyfikatów jeśli nie istnieje.
+     */
     public function __construct()
     {
         $this->middleware('auth');
+
+        $this->path = config('certifications.path');
+        $this->dn = config('certifications.dn');
+        $this->validDays = config('certifications.valid_days');
+
+        if (!File::exists($this->path)) {
+            File::makeDirectory($this->path, 0755, true);
+        }
     }
 
     /**
-     * Pobranie certyfikatu użytkownika
+     * Generuje self-signed certyfikat X.509 użytkownika wraz z zaszyfrowanym kluczem prywatnym.
+     * Wymaga podania hasła do certyfikatu różnego od hasła konta.
+     *
+     * @param Request $request
+     * @param int $userId ID użytkownika
+     * @return string Ścieżka do wygenerowanego certyfikatu
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public function generateCertificate(Request $request, int $userId = null): string
+    {
+        $request->validate([
+            'key_password' => [
+                'required',
+                'string',
+                'min:6',
+                function ($attr, $value, $fail) {
+                    if (Hash::check($value, Auth::user()->password)) {
+                        $fail('Hasło do certyfikatu nie może być takie samo jak hasło konta.');
+                    }
+                }
+            ],
+        ]);
+
+        $userId ??= Auth::id();
+        $password = $request->key_password;
+
+        $keyPath = "{$this->path}/{$userId}_key.pem";
+        $certPath = "{$this->path}/{$userId}_cert.pem";
+
+        // generowanie klucza prywatnego
+        $privateKey = openssl_pkey_new([
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            'private_key_bits' => 2048,
+        ]);
+
+        // eksport klucza prywatnego zaszyfrowanego hasłem
+        openssl_pkey_export_to_file($privateKey, $keyPath, $password);
+
+        // DN użytkownika
+        $dnUser = array_merge($this->dn, [
+            'commonName' => Auth::user()->name,
+            'emailAddress' => Auth::user()->email,
+        ]);
+
+        // CSR
+        $csr = openssl_csr_new($dnUser, $privateKey);
+
+        // self-signed cert
+        $cert = openssl_csr_sign($csr, null, $privateKey, $this->validDays);
+
+        // zapis certyfikatu
+        openssl_x509_export_to_file($cert, $certPath);
+
+        return $certPath;
+    }
+
+    /**
+     * Pobiera ścieżkę do certyfikatu użytkownika.
+     *
+     * @param int $userId
+     * @return string|null
      */
     public function getUserCertificate(int $userId): ?string
     {
-        $path = app_path("certificates/{$userId}_user_cert.pem");
-        return file_exists($path) ? file_get_contents($path) : null;
+        $certPath = "{$this->path}/{$userId}_cert.pem";
+        return File::exists($certPath) ? $certPath : null;
     }
 
     /**
-     * Pobranie certyfikatu serwera
+     * Pobiera ścieżkę do klucza prywatnego użytkownika.
+     *
+     * @param int $userId
+     * @return string|null
      */
-    public function getServerCertificate(): ?string
+    public function getUserKey(int $userId): ?string
     {
-        $path = storage_path("app/server_cert.pem");
-        return file_exists($path) ? file_get_contents($path) : null;
+        $keyPath = "{$this->path}/{$userId}_key.pem";
+        return File::exists($keyPath) ? $keyPath : null;
     }
 
     /**
-     * Pobranie konfiguracji certyfikatu serwera z /config/certificate.php
+     * Cofnięcie certyfikatu użytkownika (usunięcie certyfikatu i klucza prywatnego).
+     *
+     * @param int|null $userId
+     * @return bool
      */
-    public function getServerCertificateConfig(): array
+    public function revokeCertificate(int $userId = null): bool
     {
-        return Config::get('certificate.server', []);
+        $userId ??= Auth::id();
+
+        $certPath = "{$this->path}/{$userId}_cert.pem";
+        $keyPath = "{$this->path}/{$userId}_key.pem";
+
+        $deletedCert = File::exists($certPath) ? File::delete($certPath) : true;
+        $deletedKey = File::exists($keyPath) ? File::delete($keyPath) : true;
+
+        return $deletedCert && $deletedKey;
     }
 
     /**
-     * Walidacja certyfikatu użytkownika
+     * Widok szczegółów certyfikatu i klucza prywatnego użytkownika.
+     *
+     * @param int|null $userId
+     * @return \Illuminate\View\View
      */
-    public function validateUserCertificate(string $certData, string $userEmail): void
+    public function certificateDetailsView(int $userId = null)
     {
-        $parsed = openssl_x509_parse($certData);
-        if (!$parsed) {
-            throw new \Exception("Nieprawidłowy certyfikat użytkownika.");
+        $userId ??= Auth::id();
+
+        $certPath = $this->getUserCertificate($userId);
+        $keyPath = $this->getUserKey($userId);
+
+        if (!$certPath || !$keyPath) {
+            abort(404, 'Certyfikat nie istnieje.');
         }
 
-        // Sprawdzenie email w certyfikacie
-        if (!isset($parsed['subject']['emailAddress']) || $parsed['subject']['emailAddress'] !== $userEmail) {
-            throw new \Exception("Certyfikat użytkownika nie pasuje do adresu e-mail.");
-        }
-
-        // Sprawdzenie ważności certyfikatu
-        if (time() > $parsed['validTo_time_t']) {
-            throw new \Exception("Certyfikat użytkownika wygasł.");
-        }
-    }
-
-    /**
-     * Widok szczegółów certyfikatu
-     */
-    public function certificateDetailsView(int $userId)
-    {
-        $userCert = $this->getUserCertificate($userId);
-        $serverCert = $this->getServerCertificate();
-
-        $userCertParsed = $userCert ? openssl_x509_parse($userCert) : null;
-        $serverCertParsed = $serverCert ? openssl_x509_parse($serverCert) : null;
-
-        return view('certificates.details', [
-            'userCert' => $userCert,
-            'userCertParsed' => $userCertParsed,
-            'serverCert' => $serverCert,
-            'serverCertParsed' => $serverCertParsed,
+        return view('certifications.details', [
+            'certPath' => $certPath,
+            'keyPath' => $keyPath,
         ]);
     }
 
     /**
-     * Generowanie certyfikatu użytkownika (szablon)
-     * Tutaj w przyszłości możesz podłączyć OpenSSL lub API CA
+     * Pobranie certyfikatu lub klucza prywatnego użytkownika.
+     *
+     * @param int $userId
+     * @param string $type 'cert' lub 'key'
+     * @return StreamedResponse
      */
-    public function generateCertificate(int $userId, array $userData): string
+    public function download(int $userId, string $type): StreamedResponse
     {
-        // $userData np. ['CN' => 'Jan Kowalski', 'emailAddress' => 'jan@domena.pl']
-        // W tym miejscu logika generowania certyfikatu do pliku:
-        $certContent = "-----BEGIN CERTIFICATE-----\nFAKECERTDATAFORUSER\n-----END CERTIFICATE-----";
-        $path = app_path("certificates/{$userId}_user_cert.pem");
-        file_put_contents($path, $certContent);
-        return $certContent;
+        $filePath = $type === 'key'
+            ? $this->getUserKey($userId)
+            : $this->getUserCertificate($userId);
+
+        if (!$filePath) {
+            abort(404, 'Plik nie istnieje.');
+        }
+
+        $fileName = basename($filePath);
+
+        return response()->streamDownload(function () use ($filePath) {
+            echo File::get($filePath);
+        }, $fileName);
     }
 
     /**
-     * Cofanie certyfikatu użytkownika
+     * Walidacja certyfikatu użytkownika po adresie e-mail.
+     *
+     * @param string $certPath
+     * @param string $email
+     * @return bool
      */
-    public function revokeCertificate(int $userId): bool
+    public function validateUserCertificate(string $certPath, string $email): bool
     {
-        $path = app_path("certificates/{$userId}_user_cert.pem");
-        if (file_exists($path)) {
-            unlink($path);
-            return true;
-        }
-        return false;
+        $certContent = File::get($certPath);
+        $certData = openssl_x509_parse($certContent);
+        return $certData && ($certData['subject']['emailAddress'] ?? '') === $email;
     }
 }

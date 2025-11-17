@@ -43,7 +43,7 @@ class ConsultationController extends Controller
         $consultations = $query->get();
         $clients = Client::all();
 
-        return view('Consultation.index', compact('consultations','clients'));
+        return view('Consultation.index', compact('consultations', 'clients'));
     }
 
     // ================= SZCZEGÓŁY =========================
@@ -53,6 +53,7 @@ class ConsultationController extends Controller
 
         $xmlData = null;
         $xmlPath = storage_path("app/consultations/{$consultation->id}.xml");
+
         if (file_exists($xmlPath)) {
             try {
                 $xmlContent = file_get_contents($xmlPath);
@@ -109,6 +110,7 @@ class ConsultationController extends Controller
             'next_action' => 'nullable|string|max:255',
             'status' => 'required|in:draft,pending_system,pending_signature,completed',
             'sign_type' => 'nullable|in:qualified,eid,feer',
+            'key_password' => 'required|string|min:6', // nowe pole dla hasła certyfikatu
         ]);
 
         if ($validated['schedule_id']) {
@@ -121,13 +123,15 @@ class ConsultationController extends Controller
             }
         }
 
-        $validated['consultation_datetime'] = $validated['consultation_date'] . ' ' . $validated['consultation_time'];
+        $validated['consultation_datetime'] = "{$validated['consultation_date']} {$validated['consultation_time']}";
         unset($validated['consultation_date'], $validated['consultation_time']);
 
         $validated['user_id'] = Auth::id();
         $validated['user_email'] = Auth::user()->email;
         $validated['username'] = Auth::user()->name;
         $validated['user_ip'] = $request->ip();
+
+        $keyPassword = $validated['key_password'];
 
         $consultation = Consultation::create($validated);
 
@@ -136,7 +140,10 @@ class ConsultationController extends Controller
             ->performedOn($consultation)
             ->log("Konsultacja utworzona (status: {$validated['status']})");
 
-        return redirect()->route('consultations.create')->with('success', 'Konsultacja została dodana.');
+        return response()->json([
+            'success' => true,
+            'consultation_id' => $consultation->id
+        ]);
     }
 
     // ================= USUWANIE =========================
@@ -145,9 +152,10 @@ class ConsultationController extends Controller
         activity()
             ->causedBy(Auth::user())
             ->performedOn($consultation)
-            ->log("Konsultacja usunięta przez " . Auth::user()->name);
+            ->log("Konsultacja usunięta");
 
         $consultation->delete();
+
         return redirect()->route('consultations.index')->with('success', 'Konsultacja została usunięta.');
     }
 
@@ -156,7 +164,9 @@ class ConsultationController extends Controller
     {
         if ($consultation->status !== 'draft') {
             $msg = "Tylko wersje robocze można podpisać.";
-            return $jsonMode ? response()->json(['error' => $msg]) : redirect()->back()->with('error', $msg);
+            return $jsonMode
+                ? response()->json(['error' => $msg])
+                : redirect()->back()->with('error', $msg);
         }
 
         try {
@@ -164,15 +174,19 @@ class ConsultationController extends Controller
             $serverCertData = $this->certificate->getServerCertificate();
 
             if (!$userCertData || !$serverCertData) {
-                $msg = "Brak certyfikatu użytkownika lub serwera. Nie można podpisać konsultacji.";
+                $msg = "Brak certyfikatu użytkownika lub serwera.";
                 activity()->causedBy(Auth::user())->performedOn($consultation)->log($msg);
-                return $jsonMode ? response()->json(['error' => $msg]) : redirect()->back()->with('error', $msg);
+
+                return $jsonMode
+                    ? response()->json(['error' => $msg])
+                    : redirect()->back()->with('error', $msg);
             }
 
             $this->certificate->validateUserCertificate($userCertData, Auth::user()->email);
 
             $xmlContent = $this->generateConsultationXml($consultation);
             $filePath = $this->saveXmlFile($consultation, $xmlContent);
+
             $sha1 = sha1_file($filePath);
 
             $consultation->update([
@@ -184,13 +198,20 @@ class ConsultationController extends Controller
             activity()->causedBy(Auth::user())->performedOn($consultation)
                 ->log("Konsultacja podpisana (SHA1: {$sha1})");
 
-            $msg = "Konsultacja ID {$consultation->id} podpisana. SHA1: {$sha1}";
-            return $jsonMode ? response()->json(['success' => $msg]) : redirect()->back()->with('success', $msg);
+            $msg = "Konsultacja ID {$consultation->id} podpisana.";
+
+            return $jsonMode
+                ? response()->json(['success' => $msg])
+                : redirect()->back()->with('success', $msg);
 
         } catch (\Exception $e) {
             Log::error("Błąd podpisu konsultacji {$consultation->id}: {$e->getMessage()}");
-            $errMsg = 'Błąd podpisu: '.$e->getMessage();
-            return $jsonMode ? response()->json(['error' => $errMsg]) : redirect()->back()->with('error', $errMsg);
+
+            $errMsg = 'Błąd podpisu: ' . $e->getMessage();
+
+            return $jsonMode
+                ? response()->json(['error' => $errMsg])
+                : redirect()->back()->with('error', $errMsg);
         }
     }
 
@@ -202,13 +223,15 @@ class ConsultationController extends Controller
     // ================= PDF ==============================
     public function downloadPdf(Consultation $consultation)
     {
-        if (!$consultation->sha1sum) abort(403, 'Konsultacja nie została jeszcze podpisana.');
+        if (!$consultation->sha1sum) {
+            abort(403, 'Konsultacja nie została jeszcze podpisana.');
+        }
 
         $userCertData = $this->certificate->getUserCertificate(Auth::id());
         $serverCertData = $this->certificate->getServerCertificate();
 
         if (!$userCertData || !$serverCertData) {
-            abort(403, 'Brak wymaganych certyfikatów do wygenerowania PDF.');
+            abort(403, 'Brak certyfikatów.');
         }
 
         $qrData = $this->generateQrData($consultation);
@@ -249,8 +272,10 @@ class ConsultationController extends Controller
     {
         $dir = storage_path('app/consultations');
         if (!file_exists($dir)) mkdir($dir, 0755, true);
+
         $path = $dir . "/{$consultation->id}.xml";
         file_put_contents($path, $xmlContent);
+
         return $path;
     }
 

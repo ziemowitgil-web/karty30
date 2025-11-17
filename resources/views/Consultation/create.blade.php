@@ -98,9 +98,9 @@
                 </div>
             </fieldset>
 
-            {{-- Krok 4: Dalsze działania i opis --}}
+            {{-- Krok 4: Dalsze działania, opis i hasło certyfikatu --}}
             <fieldset class="wizard-step hidden" data-step="4">
-                <legend class="text-xl font-semibold mb-4">4. Dalsze działania i opis</legend>
+                <legend class="text-xl font-semibold mb-4">4. Dalsze działania i podpis</legend>
 
                 <div>
                     <label for="next_action" class="block text-gray-700 font-medium mb-1">Dalsze działania</label>
@@ -114,6 +114,14 @@
                     <textarea id="description" name="description" rows="3"
                               class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                               placeholder="Dodatkowe informacje..."></textarea>
+                </div>
+
+                <div class="mt-4">
+                    <label for="key_password" class="block text-gray-700 font-medium mb-1">Hasło do certyfikatu (inne niż hasło konta) <span aria-hidden="true">*</span></label>
+                    <input type="password" id="key_password" name="key_password" required
+                           class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                           placeholder="Podaj hasło do klucza prywatnego certyfikatu">
+                    <p id="keyPasswordError" class="text-red-600 text-sm mt-1 sr-only" aria-live="polite"></p>
                 </div>
 
                 <div class="flex justify-between mt-6">
@@ -138,6 +146,7 @@
             const consultationTime = document.getElementById('consultation_time');
             const durationHours = document.getElementById('duration_hours');
             const durationMinutesHidden = document.getElementById('duration_minutes_hidden');
+            const keyPasswordInput = document.getElementById('key_password');
 
             const modeBtns = document.querySelectorAll('.modeBtn');
 
@@ -194,6 +203,8 @@
             // Walidacja kroków
             function validateStep(step){
                 let valid=true;
+
+                // Krok 2: klient/rezerwacja
                 if(step===1 && !clientSelect.value){
                     const err=document.getElementById('clientError');
                     err.textContent='Wybierz klienta.';
@@ -201,6 +212,7 @@
                     valid=false;
                 } else document.getElementById('clientError').classList.add('sr-only');
 
+                // Krok 3: data, godzina, czas trwania
                 if(step===2){
                     const hours=parseFloat(durationHours.value);
                     if(!consultationDate.value || !consultationTime.value || !hours || hours<=0){
@@ -223,6 +235,17 @@
                             durErr.classList.remove('sr-only');
                         } else document.getElementById('durationError').classList.add('sr-only');
                     }
+                }
+
+                // Krok 4: hasło certyfikatu
+                if(step===3){
+                    const keyPassword = keyPasswordInput.value;
+                    if(!keyPassword){
+                        valid=false;
+                        const kpErr=document.getElementById('keyPasswordError');
+                        kpErr.textContent='Podaj hasło do certyfikatu.';
+                        kpErr.classList.remove('sr-only');
+                    } else document.getElementById('keyPasswordError').classList.add('sr-only');
                 }
 
                 return valid;
@@ -254,6 +277,7 @@
                     } else alert('Błąd podpisu: '+signData.message);
                 } else alert('Błąd zapisu: '+saveData.message);
             });
+
         });
     </script>
 @endsection

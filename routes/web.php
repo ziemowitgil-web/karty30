@@ -14,7 +14,6 @@ use App\Http\Controllers\WebAuthn\WebAuthnRegisterController;
 use App\Http\Controllers\AdminServiceController;
 use App\Http\Controllers\CertificateController;
 
-
 /*
 |--------------------------------------------------------------------------
 | Strona główna
@@ -150,13 +149,33 @@ Route::prefix('consultations')->name('consultations.')->middleware('auth')->grou
     Route::get('/{consultation}/xml', [ConsultationController::class, 'xml'])->name('xml');
     Route::get('/{consultation}/details', [ConsultationController::class, 'details'])->name('details');
 
-    // Certyfikat
+    // Certyfikat użytkownika – kompatybilność wsteczna
     Route::get('/certificate/json', [ConsultationController::class, 'certificateDetails'])->name('certificate.json');
     Route::get('/certificate', [ConsultationController::class, 'certificateDetailsView'])->name('certificate.view');
     Route::post('/certificate/generate', [ConsultationController::class, 'generateCertificate'])->name('certificate.generate');
     Route::post('/certificate/access', [ConsultationController::class, 'generateCertificate'])->name('certificate.access');
     Route::post('/certificate/revoke', [ConsultationController::class, 'revokeCertificate'])->name('certificate.revoke');
     Route::get('/certificate/download', [ConsultationController::class, 'downloadCertificate'])->name('certificate.download');
+});
+
+/*
+|--------------------------------------------------------------------------
+| CERTYFIKATY X.509 UŻYTKOWNIKA
+|--------------------------------------------------------------------------
+*/
+Route::prefix('certificates')->name('certificates.')->middleware('auth')->group(function () {
+    Route::get('/', function() {
+        return view('certifications.index');
+    })->name('index');
+
+    Route::get('/generate', function() {
+        return view('certifications.generate');
+    })->name('generate');
+
+    Route::post('/generate', [CertificateController::class, 'generateCertificate'])->name('generate.post');
+    Route::get('/details', [CertificateController::class, 'certificateDetailsView'])->name('details');
+    Route::get('/download/{userId}/{type}', [CertificateController::class, 'download'])->name('download');
+    Route::post('/revoke/{userId}', [CertificateController::class, 'revokeCertificate'])->name('revoke');
 });
 
 /*
