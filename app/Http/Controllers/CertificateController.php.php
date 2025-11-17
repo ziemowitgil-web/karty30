@@ -35,21 +35,16 @@ class CertificateController extends Controller
      */
     public function index()
     {
+        public function indexView()
+    {
         try {
-            // Twój kod np. pobieranie certyfikatu
-            ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate(auth()->id());
-
-            return view('certifications.index', compact('certPath', 'keyPath'));
-        } catch (\Exception $e) {
-            // Logujemy błąd
-            \Log::error('Błąd w CertificateController: '.$e->getMessage());
-
-            // Opcjonalnie pokazujemy komunikat użytkownikowi
-            return response()->view('certifications.error', [
-                'message' => 'Wystąpił błąd podczas wczytywania certyfikatu: '.$e->getMessage()
-            ]);
+            return view('certifications.index');
+        } catch (\Throwable $e) {
+            dd('Błąd ładowania widoku: ' . $e->getMessage(), $e->getTrace());
         }
     }
+        }
+
 
     /**
      * Widok formularza generowania certyfikatu.
