@@ -19,7 +19,8 @@
                 @if($certExists)
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                     @if($certStatus === 'Aktywny') bg-green-100 text-green-800
-                    @else bg-red-100 text-red-800 @endif">
+                    @elseif($certStatus === 'Wygasł') bg-red-100 text-red-800
+                    @else bg-yellow-100 text-yellow-800 @endif">
                     <i class="fas fa-certificate mr-1"></i> Certyfikat: {{ $certStatus }}
                         @if($certStatus === 'Aktywny' && $certValidUntil)
                             do {{ $certValidUntil }}
@@ -39,11 +40,12 @@
                     </a>
                 @else
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                    <i class="fas fa-ban mr-1"></i> Brak certyfikatu
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Brak certyfikatu lub błąd odczytu.
                 </span>
 
-                    <a href="#" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200">
-                        <i class="fas fa-plus mr-1"></i> Wygeneruj certyfikat
+                    <a href="{{ route('certificates.index') }}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
+                        <i class="fas fa-cog mr-1"></i> Sprawdź panel certyfikatów
                     </a>
                 @endif
             </div>
@@ -100,12 +102,12 @@
                                     <td class="px-3 py-2 text-gray-800">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
                                     <td class="px-3 py-2">
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                        @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
-                                        @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
-                                        @else bg-blue-100 text-blue-800 @endif">
-                                        {{ $schedule->status_label }}
-                                    </span>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                    @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
+                                    @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
+                                    @else bg-blue-100 text-blue-800 @endif">
+                                    {{ $schedule->status_label }}
+                                </span>
                                     </td>
                                 </tr>
                             @endforeach
@@ -140,12 +142,12 @@
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
                                     <td class="px-3 py-2">
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                        @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
-                                        @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
-                                        @else bg-blue-100 text-blue-800 @endif">
-                                        {{ $schedule->status_label }}
-                                    </span>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                    @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
+                                    @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
+                                    @else bg-blue-100 text-blue-800 @endif">
+                                    {{ $schedule->status_label }}
+                                </span>
                                     </td>
                                 </tr>
                             @endforeach

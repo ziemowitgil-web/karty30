@@ -17,6 +17,9 @@ class HomeController extends Controller
         $this->middleware('auth');
     }
 
+    /**
+     * Strona główna panelu.
+     */
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -78,15 +81,21 @@ class HomeController extends Controller
         $certStatus = 'Brak';
 
         if ($certExists) {
-            $certContent = File::get($certPath);
-            $certInfo = openssl_x509_parse($certContent);
-            $certCN = $certInfo['subject']['CN'] ?? 'Nieznany użytkownik';
-            $certOrg = $certInfo['subject']['O'] ?? 'Brak danych o organizacji';
-            if (isset($certInfo['validTo_time_t'])) {
-                $certValidUntil = date('d.m.Y', $certInfo['validTo_time_t']);
-                $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
-                $certExpiringSoon = $daysLeft <= 10;
-                $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
+            try {
+                $certContent = File::get($certPath);
+                $certInfo = openssl_x509_parse($certContent);
+                $certCN = $certInfo['subject']['CN'] ?? 'Nieznany użytkownik';
+                $certOrg = $certInfo['subject']['O'] ?? 'Brak danych o organizacji';
+                if (isset($certInfo['validTo_time_t'])) {
+                    $certValidUntil = date('d.m.Y', $certInfo['validTo_time_t']);
+                    $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
+                    $certExpiringSoon = $daysLeft <= 10;
+                    $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
+                }
+            } catch (\Exception $e) {
+                // W razie problemu z certyfikatem
+                return redirect()->route('certificates.index')
+                    ->with('error', 'Nie udało się odczytać certyfikatu. Sprawdź panel certyfikatów.');
             }
         }
 
@@ -111,6 +120,9 @@ class HomeController extends Controller
         ));
     }
 
+    /**
+     * Przełącza widok dostępny/standardowy.
+     */
     public function toggleAccessible(Request $request)
     {
         $accessible = session('accessible_view', false);
@@ -119,6 +131,75 @@ class HomeController extends Controller
         return response()->json([
             'status' => 'success',
             'accessible' => !$accessible
+        ]);
+    }
+
+    /**
+     * API: statystyki konsultacji w JSON.
+     */
+    public function stats(Request $request)
+    {
+        $user = Auth::user();
+        $stats = Consultation::selectRaw('status, COUNT(*) as total')
+            ->where('user_id', $user->id)
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return response()->json($stats);
+    }
+
+    /**
+     * API: toggle trybu testowego (tylko admin).
+     */
+    public function toggleTestMode(Request $request)
+    {
+        $this->authorize('admin');
+        $current = env('TEST_MODE', 1);
+        $new = $current ? 0 : 1;
+
+        return response()->json([
+            'status' => 'success',
+            'testMode' => $new ? 'TRYB TESTOWY' : 'PRODUKCJA'
+        ]);
+    }
+
+    /**
+     * API: pobierz nadchodzące harmonogramy w JSON.
+     */
+    public function upcomingSchedules(Request $request)
+    {
+        $user = Auth::user();
+        $schedules = Schedule::where('user_id', $user->id)
+            ->where('start_time', '>=', now())
+            ->orderBy('start_time')
+            ->get();
+
+        return response()->json($schedules);
+    }
+
+    /**
+     * API: odśwież status certyfikatu (AJAX).
+     */
+    public function refreshCertificateStatus(Request $request)
+    {
+        $user = Auth::user();
+        $certPath = config('certifications.path') . "/{$user->id}_cert.pem";
+        $certExists = File::exists($certPath);
+        $certStatus = 'Brak';
+
+        if ($certExists) {
+            try {
+                $certInfo = openssl_x509_parse(File::get($certPath));
+                $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
+                $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
+            } catch (\Exception $e) {
+                $certStatus = 'Błąd odczytu';
+            }
+        }
+
+        return response()->json([
+            'certExists' => $certExists,
+            'certStatus' => $certStatus
         ]);
     }
 }
