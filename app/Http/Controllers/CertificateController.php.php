@@ -9,29 +9,21 @@ use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Kontroler odpowiedzialny za obsługę certyfikatów X.509 użytkowników.
- *
- * Certyfikaty i klucze przechowywane są w katalogu określonym w
- * config/certifications.php (domyślnie /app/certifications).
+ * Kontroler obsługujący certyfikaty X.509 użytkowników.
  */
 class CertificateController extends Controller
 {
-    /** @var string Ścieżka do katalogu z certyfikatami */
     protected string $path;
-
-    /** @var array Domyślne dane DN (Distinguished Name) dla certyfikatów */
     protected array $dn;
-
-    /** @var int Liczba dni ważności certyfikatu */
     protected int $validDays;
 
     public function __construct()
     {
         $this->middleware('auth');
 
-        $this->path = config('certifications.path');
-        $this->dn = config('certifications.dn');
-        $this->validDays = config('certifications.valid_days');
+        $this->path = config('certifications.path', storage_path('app/certifications'));
+        $this->dn = config('certifications.dn', []);
+        $this->validDays = config('certifications.valid_days', 365);
 
         if (!File::exists($this->path)) {
             File::makeDirectory($this->path, 0755, true);
@@ -39,23 +31,23 @@ class CertificateController extends Controller
     }
 
     /**
-     * Widok listy certyfikatów / panel główny.
+     * Widok panelu certyfikatów.
      */
-    public function indexView()
+    public function index(): \Illuminate\View\View
     {
-        return view('certificates.index');
+        return view('certifications.index');
     }
 
     /**
      * Widok formularza generowania certyfikatu.
      */
-    public function generateView()
+    public function generateView(): \Illuminate\View\View
     {
-        return view('certificates.generate');
+        return view('certifications.generate');
     }
 
     /**
-     * Generuje self-signed certyfikat X.509 użytkownika wraz z zaszyfrowanym kluczem prywatnym.
+     * Generuje certyfikat X.509 dla użytkownika.
      */
     public function generateCertificate(Request $request, int $userId)
     {
@@ -74,29 +66,22 @@ class CertificateController extends Controller
 
         $password = $request->key_password;
 
-        // generowanie klucza prywatnego
         $privateKey = openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
             'private_key_bits' => 2048,
         ]);
 
-        // eksport klucza prywatnego zaszyfrowanego hasłem
         $keyPath = "{$this->path}/{$userId}_key.pem";
         openssl_pkey_export_to_file($privateKey, $keyPath, $password);
 
-        // DN użytkownika
         $dnUser = array_merge($this->dn, [
             'commonName' => Auth::user()->name,
             'emailAddress' => Auth::user()->email,
         ]);
 
-        // CSR
         $csr = openssl_csr_new($dnUser, $privateKey);
-
-        // self-signed cert
         $cert = openssl_csr_sign($csr, null, $privateKey, $this->validDays);
 
-        // zapis certyfikatu
         $certPath = "{$this->path}/{$userId}_cert.pem";
         openssl_x509_export_to_file($cert, $certPath);
 
@@ -105,7 +90,7 @@ class CertificateController extends Controller
     }
 
     /**
-     * Widok szczegółów certyfikatu i klucza prywatnego użytkownika.
+     * Widok szczegółów certyfikatu użytkownika.
      */
     public function certificateDetailsView(int $userId)
     {
@@ -114,7 +99,7 @@ class CertificateController extends Controller
         $certContent = File::get($certPath);
         $certInfo = openssl_x509_parse($certContent);
 
-        return view('certificates.details', compact('certPath', 'keyPath', 'certInfo'));
+        return view('certifications.details', compact('certPath', 'keyPath', 'certInfo'));
     }
 
     /**
@@ -136,7 +121,7 @@ class CertificateController extends Controller
     }
 
     /**
-     * Cofnięcie certyfikatu użytkownika (usunięcie certyfikatu i klucza prywatnego).
+     * Cofnięcie certyfikatu użytkownika.
      */
     public function revokeCertificate(int $userId)
     {
@@ -150,7 +135,7 @@ class CertificateController extends Controller
     }
 
     /**
-     * Pobiera ścieżki do certyfikatu i klucza prywatnego użytkownika.
+     * Pobiera ścieżki certyfikatu i klucza użytkownika.
      */
     public function getUserCertificate(int $userId): array
     {
