@@ -60,7 +60,6 @@
                     ['route'=>'clients.create', 'color'=>'green', 'icon'=>'fa-user-plus', 'label'=>'Dodaj klienta'],
                     ['route'=>'clients.index', 'color'=>'teal', 'icon'=>'fa-users', 'label'=>'Lista klientów'],
                     ['route'=>'raport', 'color'=>'gray', 'icon'=>'fa-file-alt', 'label'=>'Raporty'],
-                    ['route'=>'certificates.index', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Certyfikaty'],
                 ];
             @endphp
 
