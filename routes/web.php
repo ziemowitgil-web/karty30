@@ -45,6 +45,30 @@ Route::post('/toggle-accessible', [HomeController::class, 'toggleAccessible'])
 */
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
+
+/*
+|--------------------------------------------------------------------------
+| CERTYFIKATY
+|--------------------------------------------------------------------------
+*/
+Route::prefix('certificates')->name('certificates.')->middleware('auth')->group(function () {
+    // Lista certyfikatów użytkowników
+    Route::get('/', [CertificateController::class, 'index'])->name('index');
+
+    // Podgląd certyfikatu użytkownika
+    Route::get('/{userId}/details', [CertificateController::class, 'details'])->name('details');
+
+    // Pobranie certyfikatu / klucza
+    Route::get('/{userId}/download/{type}', [CertificateController::class, 'download'])->name('download');
+
+    // Wygenerowanie nowego certyfikatu dla użytkownika
+    Route::get('/{userId}/generate', [CertificateController::class, 'showGenerateForm'])->name('generate.form');
+    Route::post('/{userId}/generate', [CertificateController::class, 'generate'])->name('generate');
+
+    // Cofnięcie/revokacja certyfikatu
+    Route::post('/{userId}/revoke', [CertificateController::class, 'revoke'])->name('revoke');
+});
+
 /*
 |--------------------------------------------------------------------------
 | PANEL UŻYTKOWNIKA (pusta sekcja do rozbudowy)
