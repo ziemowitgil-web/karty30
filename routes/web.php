@@ -148,14 +148,6 @@ Route::prefix('consultations')->name('consultations.')->middleware('auth')->grou
     Route::get('/{consultation}/pdf', [ConsultationController::class, 'downloadPdf'])->name('pdf');
     Route::get('/{consultation}/xml', [ConsultationController::class, 'xml'])->name('xml');
     Route::get('/{consultation}/details', [ConsultationController::class, 'details'])->name('details');
-
-    // Certyfikaty użytkownika – nowy CertificateController
-    Route::prefix('certificate')->name('certificate.')->group(function () {
-        Route::get('/', [CertificateController::class, 'certificateDetailsView'])->name('view');
-        Route::post('/generate', [CertificateController::class, 'generateCertificate'])->name('generate');
-        Route::post('/revoke', [CertificateController::class, 'revokeCertificate'])->name('revoke');
-        Route::get('/download', [CertificateController::class, 'downloadCertificate'])->name('download');
-    });
 });
 
 /*
@@ -165,7 +157,7 @@ Route::prefix('consultations')->name('consultations.')->middleware('auth')->grou
 */
 Route::prefix('certificates')->name('certificates.')->middleware('auth')->group(function () {
     Route::get('/', function() {
-        return view('certificates.index');
+        return view('certifications.index');
     })->name('index');
 
     Route::get('/generate', function() {
