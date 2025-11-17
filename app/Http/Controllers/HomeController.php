@@ -8,16 +8,13 @@ use App\Models\Consultation;
 use App\Models\Schedule;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Support\Facades\Redis;
-use App\Http\Controllers\CertificateController;
+use Illuminate\Support\Facades\File;
 
 class HomeController extends Controller
 {
-    protected CertificateController $certificateController;
-
-    public function __construct(CertificateController $certificateController)
+    public function __construct()
     {
         $this->middleware('auth');
-        $this->certificateController = $certificateController;
     }
 
     public function index(Request $request)
@@ -36,17 +33,14 @@ class HomeController extends Controller
                 $redisStatus = "Błąd połączenia z Redis! Kolejkowanie może nie działać.";
             }
         } else {
-            $redisStatus = 'Błąd połączenia - blokada. Tryb testowy REDIS nie zbiera danych sesji.';
+            $redisStatus = 'Tryb testowy REDIS - brak danych sesji.';
         }
 
         // --- LOG DO ACTIVITY ---
-        activity()
-            ->causedBy($user)
-            ->withProperties([
-                'redis_status' => $redisStatus,
-                'app_mode' => $testMode,
-            ])
-            ->log('Wejście na stronę główną');
+        activity()->causedBy($user)->withProperties([
+            'redis_status' => $redisStatus,
+            'app_mode' => $testMode,
+        ])->log('Wejście na stronę główną');
 
         // --- STATYSTYKI KONSULTACJI ---
         $rawStats = Consultation::selectRaw('status, COUNT(*) as total')
@@ -60,20 +54,6 @@ class HomeController extends Controller
             'completed' => $rawStats['completed'] ?? 0,
             'cancelled' => $rawStats['cancelled'] ?? 0,
         ];
-
-        // --- OSTATNIE AKCJE ---
-        $recentActions = Activity::where('causer_id', $user->id)
-            ->latest()
-            ->take(10)
-            ->get()
-            ->map(function($activity) {
-                return (object) [
-                    'created_at' => $activity->created_at,
-                    'action_type' => $activity->description,
-                    'target_name' => $activity->subject?->name ?? ($activity->subject_type ?? '-'),
-                    'status_label' => $activity->properties['status'] ?? '-',
-                ];
-            });
 
         // --- HARMONOGRAM ---
         $todaySchedules = Schedule::whereDate('start_time', today())
@@ -89,14 +69,24 @@ class HomeController extends Controller
             ->get();
 
         // --- STATUS CERTYFIKATU ---
-        $userCertificate = $this->certificateController->getUserCertificate($user->id);
+        $certPath = config('certifications.path') . "/{$user->id}_cert.pem";
+        $certExists = File::exists($certPath);
+        $certCN = 'Brak certyfikatu';
+        $certOrg = null;
+        $certValidUntil = null;
+        $certExpiringSoon = false;
+        $certStatus = 'Brak';
 
-        // --- TRYB DOSTĘPNOŚCI ---
-        if ($request->has('accessible')) {
-            if ($request->boolean('accessible')) {
-                session(['accessible_view' => true]);
-            } else {
-                session()->forget('accessible_view');
+        if ($certExists) {
+            $certContent = File::get($certPath);
+            $certInfo = openssl_x509_parse($certContent);
+            $certCN = $certInfo['subject']['CN'] ?? 'Nieznany użytkownik';
+            $certOrg = $certInfo['subject']['O'] ?? 'Brak danych o organizacji';
+            if (isset($certInfo['validTo_time_t'])) {
+                $certValidUntil = date('d.m.Y', $certInfo['validTo_time_t']);
+                $daysLeft = ($certInfo['validTo_time_t'] - time()) / 86400;
+                $certExpiringSoon = $daysLeft <= 10;
+                $certStatus = $daysLeft > 0 ? 'Aktywny' : 'Wygasł';
             }
         }
 
@@ -104,17 +94,20 @@ class HomeController extends Controller
         $view = $accessible ? 'home2' : 'home';
         $hasWebAuthnKeys = $user->hasWebauthnKey();
 
-        // --- ZWRÓCENIE WIDOKU Z DANYMI ---
         return view($view, compact(
             'user',
             'stats',
-            'recentActions',
             'todaySchedules',
             'weekSchedules',
+            'certExists',
+            'certCN',
+            'certOrg',
+            'certValidUntil',
+            'certStatus',
+            'certExpiringSoon',
             'hasWebAuthnKeys',
             'redisStatus',
-            'testMode',
-            'userCertificate' // status certyfikatu w widoku
+            'testMode'
         ));
     }
 

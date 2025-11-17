@@ -10,29 +10,41 @@
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <p class="font-semibold text-gray-900">{{ $userCertificate['CN'] ?? $user->name }}</p>
-                    <p class="text-gray-700 text-sm">Organizacja: {{ $userCertificate['O'] ?? 'Brak danych' }}</p>
+                    <p class="font-semibold text-gray-900">{{ $certCN }}</p>
+                    <p class="text-gray-700 text-sm">Organizacja: {{ $certOrg ?? '-' }}</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                @if(!empty($userCertificate))
-                    @php
-                        $status = $userCertificate['status'] ?? 'Brak';
-                        $validUntil = $userCertificate['valid_until'] ?? null;
-                        $badgeColor = match($status) {
-                            'Aktywny' => 'green',
-                            'Wygasł' => 'red',
-                            default => 'gray'
-                        };
-                    @endphp
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-{{ $badgeColor }}-100 text-{{ $badgeColor }}-800">
-                    <i class="fas fa-certificate mr-1"></i>
-                    Certyfikat: {{ $status }} @if($status === 'Aktywny' && $validUntil) do {{ $validUntil }} @endif
+
+            <div class="flex items-center gap-2 flex-wrap">
+                @if($certExists)
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                    @if($certStatus === 'Aktywny') bg-green-100 text-green-800
+                    @else bg-red-100 text-red-800 @endif">
+                    <i class="fas fa-certificate mr-1"></i> Certyfikat: {{ $certStatus }}
+                        @if($certStatus === 'Aktywny' && $certValidUntil)
+                            do {{ $certValidUntil }}
+                        @endif
                 </span>
+
+                    <a href="{{ route('certificates.details', ['userId' => $user->id]) }}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
+                        <i class="fas fa-eye mr-1"></i> Podgląd
+                    </a>
+
+                    <a href="{{ route('certificates.download', ['userId' => $user->id, 'type' => 'cert']) }}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        <i class="fas fa-download mr-1"></i> Pobierz certyfikat
+                    </a>
+
+                    <a href="{{ route('certificates.download', ['userId' => $user->id, 'type' => 'key']) }}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200">
+                        <i class="fas fa-key mr-1"></i> Pobierz klucz
+                    </a>
                 @else
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                     <i class="fas fa-ban mr-1"></i> Brak certyfikatu
                 </span>
+
+                    <a href="{{ route('certificates.generate') }}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200">
+                        <i class="fas fa-plus mr-1"></i> Wygeneruj certyfikat
+                    </a>
                 @endif
             </div>
         </section>
@@ -46,7 +58,7 @@
                     ['route'=>'clients.create', 'color'=>'green', 'icon'=>'fa-user-plus', 'label'=>'Dodaj klienta'],
                     ['route'=>'clients.index', 'color'=>'teal', 'icon'=>'fa-users', 'label'=>'Lista klientów'],
                     ['route'=>'raport', 'color'=>'gray', 'icon'=>'fa-file-alt', 'label'=>'Raporty'],
-                    ['route'=>'certificates.index', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Certyfikat'],
+                    ['route'=>'certificates.index', 'color'=>'yellow', 'icon'=>'fa-certificate', 'label'=>'Certyfikaty'],
                 ];
             @endphp
 
@@ -62,21 +74,10 @@
             @endforeach
         </section>
 
-        {{-- INFORMACJE O PRODUKCJI / CERTYFIKACIE --}}
-        <section class="bg-white rounded-2xl shadow p-6" aria-label="Informacje o certyfikacie">
-            <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <i class="fas fa-info-circle text-yellow-600"></i> Informacje o certyfikacie
-            </h2>
-            <p class="text-gray-700 leading-snug">
-                W <strong>wersji produkcyjnej</strong> do wydania certyfikatu oraz pełnej obsługi systemu wymagane będzie potwierdzenie kwalifikacji dokumentem.
-                Możesz zarządzać swoim certyfikatem w zakładce
-                <a href="{{ route('certificates.index') }}" class="text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400">Certyfikaty</a>.
-            </p>
-        </section>
-
         {{-- REZERWACJE --}}
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {{-- DZISIEJSZE --}}
+
+            {{-- DZISIEJSZE REZERWACJE --}}
             <div class="bg-white border border-gray-200 rounded-2xl shadow p-5">
                 <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <i class="fas fa-calendar-day text-blue-600"></i> Dzisiejsze rezerwacje
@@ -99,14 +100,10 @@
                                     <td class="px-3 py-2 text-gray-800">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
                                     <td class="px-3 py-2">
-                                        @php
-                                            $statusClass = match($schedule->status_label) {
-                                                'Zatwierdzony' => 'bg-green-100 text-green-800',
-                                                'Anulowany' => 'bg-red-100 text-red-800',
-                                                default => 'bg-blue-100 text-blue-800'
-                                            };
-                                        @endphp
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                        @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
+                                        @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
+                                        @else bg-blue-100 text-blue-800 @endif">
                                         {{ $schedule->status_label }}
                                     </span>
                                     </td>
@@ -143,14 +140,10 @@
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->start_time->format('H:i') }}</td>
                                     <td class="px-3 py-2 text-gray-700">{{ $schedule->client->name ?? '-' }}</td>
                                     <td class="px-3 py-2">
-                                        @php
-                                            $statusClass = match($schedule->status_label) {
-                                                'Zatwierdzony' => 'bg-green-100 text-green-800',
-                                                'Anulowany' => 'bg-red-100 text-red-800',
-                                                default => 'bg-blue-100 text-blue-800'
-                                            };
-                                        @endphp
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                        @if($schedule->status_label === 'Zatwierdzony') bg-green-100 text-green-800
+                                        @elseif($schedule->status_label === 'Anulowany') bg-red-100 text-red-800
+                                        @else bg-blue-100 text-blue-800 @endif">
                                         {{ $schedule->status_label }}
                                     </span>
                                     </td>
@@ -161,6 +154,7 @@
                     </div>
                 @endif
             </div>
+
         </section>
     </div>
 @endsection
