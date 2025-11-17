@@ -164,17 +164,22 @@ Route::prefix('consultations')->name('consultations.')->middleware('auth')->grou
 |--------------------------------------------------------------------------
 */
 Route::prefix('certificates')->name('certificates.')->middleware('auth')->group(function () {
-    Route::get('/', function() {
-        return view('certifications.index');
-    })->name('index');
+    // Widok listy certyfikatów / panel główny
+    Route::get('/', [CertificateController::class, 'indexView'])->name('index');
 
-    Route::get('/generate', function() {
-        return view('certifications.generate');
-    })->name('generate');
+    // Widok formularza generowania certyfikatu
+    Route::get('/generate', [CertificateController::class, 'generateView'])->name('generate');
 
+    // Akcja generowania certyfikatu (POST)
     Route::post('/generate', [CertificateController::class, 'generateCertificate'])->name('generate.post');
-    Route::get('/details', [CertificateController::class, 'certificateDetailsView'])->name('details');
+
+    // Widok szczegółów certyfikatu i klucza prywatnego
+    Route::get('/details/{userId}', [CertificateController::class, 'certificateDetailsView'])->name('details');
+
+    // Pobranie certyfikatu / klucza
     Route::get('/download/{userId}/{type}', [CertificateController::class, 'download'])->name('download');
+
+    // Cofnięcie certyfikatu
     Route::post('/revoke/{userId}', [CertificateController::class, 'revokeCertificate'])->name('revoke');
 });
 
