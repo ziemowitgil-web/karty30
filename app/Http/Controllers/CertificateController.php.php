@@ -6,11 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Kontroler odpowiedzialny za generowanie, obsługę i walidację
- * certyfikatów X.509 użytkowników.
+ * Kontroler odpowiedzialny za generowanie, pobieranie, cofanie
+ * i wyświetlanie certyfikatów X.509 użytkowników.
  *
  * Certyfikaty i klucze przechowywane są w katalogu określonym w
  * config/certifications.php (domyślnie /app/certifications).
@@ -45,16 +44,35 @@ class CertificateController extends Controller
     }
 
     /**
+     * Widok listy certyfikatów użytkownika.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function indexView()
+    {
+        return view('certificates.index');
+    }
+
+    /**
+     * Widok formularza generowania certyfikatu.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function generateView()
+    {
+        return view('certificates.generate');
+    }
+
+    /**
      * Generuje self-signed certyfikat X.509 użytkownika wraz z zaszyfrowanym kluczem prywatnym.
      * Wymaga podania hasła do certyfikatu różnego od hasła konta.
      *
      * @param Request $request
-     * @param int $userId ID użytkownika
-     * @return string Ścieżka do wygenerowanego certyfikatu
+     * @return \Illuminate\Http\RedirectResponse
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function generateCertificate(Request $request, int $userId = null): string
+    public function generateCertificate(Request $request)
     {
         $request->validate([
             'key_password' => [
@@ -69,8 +87,8 @@ class CertificateController extends Controller
             ],
         ]);
 
-        $userId ??= Auth::id();
         $password = $request->key_password;
+        $userId = Auth::id();
 
         $keyPath = "{$this->path}/{$userId}_key.pem";
         $certPath = "{$this->path}/{$userId}_cert.pem";
@@ -99,72 +117,29 @@ class CertificateController extends Controller
         // zapis certyfikatu
         openssl_x509_export_to_file($cert, $certPath);
 
-        return $certPath;
-    }
-
-    /**
-     * Pobiera ścieżkę do certyfikatu użytkownika.
-     *
-     * @param int $userId
-     * @return string|null
-     */
-    public function getUserCertificate(int $userId): ?string
-    {
-        $certPath = "{$this->path}/{$userId}_cert.pem";
-        return File::exists($certPath) ? $certPath : null;
-    }
-
-    /**
-     * Pobiera ścieżkę do klucza prywatnego użytkownika.
-     *
-     * @param int $userId
-     * @return string|null
-     */
-    public function getUserKey(int $userId): ?string
-    {
-        $keyPath = "{$this->path}/{$userId}_key.pem";
-        return File::exists($keyPath) ? $keyPath : null;
-    }
-
-    /**
-     * Cofnięcie certyfikatu użytkownika (usunięcie certyfikatu i klucza prywatnego).
-     *
-     * @param int|null $userId
-     * @return bool
-     */
-    public function revokeCertificate(int $userId = null): bool
-    {
-        $userId ??= Auth::id();
-
-        $certPath = "{$this->path}/{$userId}_cert.pem";
-        $keyPath = "{$this->path}/{$userId}_key.pem";
-
-        $deletedCert = File::exists($certPath) ? File::delete($certPath) : true;
-        $deletedKey = File::exists($keyPath) ? File::delete($keyPath) : true;
-
-        return $deletedCert && $deletedKey;
+        return redirect()->route('certificates.details', $userId)
+            ->with('success', 'Certyfikat wygenerowany.');
     }
 
     /**
      * Widok szczegółów certyfikatu i klucza prywatnego użytkownika.
      *
-     * @param int|null $userId
+     * @param int $userId
      * @return \Illuminate\View\View
      */
-    public function certificateDetailsView(int $userId = null)
+    public function certificateDetailsView(int $userId)
     {
-        $userId ??= Auth::id();
+        $certPath = "{$this->path}/{$userId}_cert.pem";
+        $keyPath = "{$this->path}/{$userId}_key.pem";
 
-        $certPath = $this->getUserCertificate($userId);
-        $keyPath = $this->getUserKey($userId);
-
-        if (!$certPath || !$keyPath) {
+        if (!File::exists($certPath) || !File::exists($keyPath)) {
             abort(404, 'Certyfikat nie istnieje.');
         }
 
-        return view('certifications.details', [
+        return view('certificates.details', [
             'certPath' => $certPath,
             'keyPath' => $keyPath,
+            'userId' => $userId,
         ]);
     }
 
@@ -172,37 +147,39 @@ class CertificateController extends Controller
      * Pobranie certyfikatu lub klucza prywatnego użytkownika.
      *
      * @param int $userId
-     * @param string $type 'cert' lub 'key'
-     * @return StreamedResponse
+     * @param string $type "cert" lub "key"
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
-    public function download(int $userId, string $type): StreamedResponse
+    public function download(int $userId, string $type)
     {
-        $filePath = $type === 'key'
-            ? $this->getUserKey($userId)
-            : $this->getUserCertificate($userId);
+        $file = match($type) {
+            'cert' => "{$this->path}/{$userId}_cert.pem",
+            'key' => "{$this->path}/{$userId}_key.pem",
+            default => null,
+        };
 
-        if (!$filePath) {
-            abort(404, 'Plik nie istnieje.');
+        if (!$file || !File::exists($file)) {
+            abort(404);
         }
 
-        $fileName = basename($filePath);
-
-        return response()->streamDownload(function () use ($filePath) {
-            echo File::get($filePath);
-        }, $fileName);
+        return response()->download($file);
     }
 
     /**
-     * Walidacja certyfikatu użytkownika po adresie e-mail.
+     * Cofnięcie certyfikatu użytkownika (usunięcie certyfikatu i klucza prywatnego).
      *
-     * @param string $certPath
-     * @param string $email
-     * @return bool
+     * @param int $userId
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function validateUserCertificate(string $certPath, string $email): bool
+    public function revokeCertificate(int $userId)
     {
-        $certContent = File::get($certPath);
-        $certData = openssl_x509_parse($certContent);
-        return $certData && ($certData['subject']['emailAddress'] ?? '') === $email;
+        $certPath = "{$this->path}/{$userId}_cert.pem";
+        $keyPath = "{$this->path}/{$userId}_key.pem";
+
+        if (File::exists($certPath)) File::delete($certPath);
+        if (File::exists($keyPath)) File::delete($keyPath);
+
+        return redirect()->route('certificates.index')
+            ->with('success', 'Certyfikat został cofnięty.');
     }
 }
