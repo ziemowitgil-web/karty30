@@ -165,7 +165,7 @@ Route::prefix('consultations')->name('consultations.')->middleware('auth')->grou
 */
 Route::prefix('certificates')->name('certificates.')->middleware('auth')->group(function () {
     Route::get('/', function() {
-        return view('certifications.index');
+        return view('certificates.index');
     })->name('index');
 
     Route::get('/generate', function() {
