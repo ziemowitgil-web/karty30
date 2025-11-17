@@ -25,11 +25,6 @@ class CertificateController extends Controller
     /** @var int Liczba dni ważności certyfikatu */
     protected int $validDays;
 
-    /**
-     * Konstruktor kontrolera.
-     * Inicjalizuje ścieżkę, domyślny DN i dni ważności z konfiguracji.
-     * Tworzy katalog certyfikatów jeśli nie istnieje.
-     */
     public function __construct()
     {
         $this->middleware('auth');
@@ -45,8 +40,6 @@ class CertificateController extends Controller
 
     /**
      * Widok listy certyfikatów / panel główny.
-     *
-     * @return \Illuminate\View\View
      */
     public function indexView()
     {
@@ -55,8 +48,6 @@ class CertificateController extends Controller
 
     /**
      * Widok formularza generowania certyfikatu.
-     *
-     * @return \Illuminate\View\View
      */
     public function generateView()
     {
@@ -65,13 +56,6 @@ class CertificateController extends Controller
 
     /**
      * Generuje self-signed certyfikat X.509 użytkownika wraz z zaszyfrowanym kluczem prywatnym.
-     * Wymaga podania hasła do certyfikatu różnego od hasła konta.
-     *
-     * @param Request $request
-     * @param int $userId ID użytkownika
-     * @return \Illuminate\Http\RedirectResponse
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
     public function generateCertificate(Request $request, int $userId)
     {
@@ -90,9 +74,6 @@ class CertificateController extends Controller
 
         $password = $request->key_password;
 
-        $keyPath = "{$this->path}/{$userId}_key.pem";
-        $certPath = "{$this->path}/{$userId}_cert.pem";
-
         // generowanie klucza prywatnego
         $privateKey = openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
@@ -100,6 +81,7 @@ class CertificateController extends Controller
         ]);
 
         // eksport klucza prywatnego zaszyfrowanego hasłem
+        $keyPath = "{$this->path}/{$userId}_key.pem";
         openssl_pkey_export_to_file($privateKey, $keyPath, $password);
 
         // DN użytkownika
@@ -115,6 +97,7 @@ class CertificateController extends Controller
         $cert = openssl_csr_sign($csr, null, $privateKey, $this->validDays);
 
         // zapis certyfikatu
+        $certPath = "{$this->path}/{$userId}_cert.pem";
         openssl_x509_export_to_file($cert, $certPath);
 
         return redirect()->route('certificates.details', ['userId' => $userId])
@@ -123,66 +106,64 @@ class CertificateController extends Controller
 
     /**
      * Widok szczegółów certyfikatu i klucza prywatnego użytkownika.
-     *
-     * @param int $userId
-     * @return \Illuminate\View\View
      */
     public function certificateDetailsView(int $userId)
     {
-        $certPath = "{$this->path}/{$userId}_cert.pem";
-        $keyPath = "{$this->path}/{$userId}_key.pem";
-
-        if (!File::exists($certPath) || !File::exists($keyPath)) {
-            abort(404, 'Certyfikat nie istnieje.');
-        }
+        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
 
         $certContent = File::get($certPath);
         $certInfo = openssl_x509_parse($certContent);
 
-        return view('certificates.details', [
-            'certPath' => $certPath,
-            'keyPath' => $keyPath,
-            'certInfo' => $certInfo,
-        ]);
+        return view('certificates.details', compact('certPath', 'keyPath', 'certInfo'));
     }
 
     /**
      * Pobiera certyfikat lub klucz prywatny użytkownika.
-     *
-     * @param int $userId
-     * @param string $type 'cert' lub 'key'
-     * @return StreamedResponse
      */
-    public function download(int $userId, string $type)
+    public function download(int $userId, string $type): StreamedResponse
     {
+        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
+
         $file = match($type) {
-            'cert' => "{$this->path}/{$userId}_cert.pem",
-            'key' => "{$this->path}/{$userId}_key.pem",
+            'cert' => $certPath,
+            'key' => $keyPath,
             default => null
         };
 
-        if (!$file || !File::exists($file)) {
-            abort(404, 'Plik nie istnieje.');
-        }
+        if (!$file) abort(404, 'Niepoprawny typ pliku.');
 
         return response()->download($file);
     }
 
     /**
      * Cofnięcie certyfikatu użytkownika (usunięcie certyfikatu i klucza prywatnego).
-     *
-     * @param int $userId
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function revokeCertificate(int $userId)
+    {
+        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
+
+        $deletedCert = File::delete($certPath);
+        $deletedKey = File::delete($keyPath);
+
+        return redirect()->route('certificates.index')
+            ->with('success', $deletedCert && $deletedKey ? 'Certyfikat został cofnięty.' : 'Błąd przy cofaniu certyfikatu.');
+    }
+
+    /**
+     * Pobiera ścieżki do certyfikatu i klucza prywatnego użytkownika.
+     */
+    public function getUserCertificate(int $userId): array
     {
         $certPath = "{$this->path}/{$userId}_cert.pem";
         $keyPath = "{$this->path}/{$userId}_key.pem";
 
-        $deletedCert = File::exists($certPath) ? File::delete($certPath) : true;
-        $deletedKey = File::exists($keyPath) ? File::delete($keyPath) : true;
+        if (!File::exists($certPath) || !File::exists($keyPath)) {
+            abort(404, 'Certyfikat lub klucz prywatny nie istnieje.');
+        }
 
-        return redirect()->route('certificates.index')
-            ->with('success', $deletedCert && $deletedKey ? 'Certyfikat został cofnięty.' : 'Błąd przy cofaniu certyfikatu.');
+        return [
+            'cert' => $certPath,
+            'key' => $keyPath,
+        ];
     }
 }
