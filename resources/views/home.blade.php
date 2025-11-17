@@ -44,7 +44,7 @@
                     Brak certyfikatu lub błąd odczytu.
                 </span>
 
-                    <a href="{{ route('certificates.index') }}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
+                    <a href="" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
                         <i class="fas fa-cog mr-1"></i> Sprawdź panel certyfikatów
                     </a>
                 @endif
