@@ -149,13 +149,13 @@ Route::prefix('consultations')->name('consultations.')->middleware('auth')->grou
     Route::get('/{consultation}/xml', [ConsultationController::class, 'xml'])->name('xml');
     Route::get('/{consultation}/details', [ConsultationController::class, 'details'])->name('details');
 
-    // Certyfikat użytkownika – kompatybilność wsteczna
-    Route::get('/certificate/json', [ConsultationController::class, 'certificateDetails'])->name('certificate.json');
-    Route::get('/certificate', [ConsultationController::class, 'certificateDetailsView'])->name('certificate.view');
-    Route::post('/certificate/generate', [ConsultationController::class, 'generateCertificate'])->name('certificate.generate');
-    Route::post('/certificate/access', [ConsultationController::class, 'generateCertificate'])->name('certificate.access');
-    Route::post('/certificate/revoke', [ConsultationController::class, 'revokeCertificate'])->name('certificate.revoke');
-    Route::get('/certificate/download', [ConsultationController::class, 'downloadCertificate'])->name('certificate.download');
+    // Certyfikaty użytkownika – nowy CertificateController
+    Route::prefix('certificate')->name('certificate.')->group(function () {
+        Route::get('/', [CertificateController::class, 'certificateDetailsView'])->name('view');
+        Route::post('/generate', [CertificateController::class, 'generateCertificate'])->name('generate');
+        Route::post('/revoke', [CertificateController::class, 'revokeCertificate'])->name('revoke');
+        Route::get('/download', [CertificateController::class, 'downloadCertificate'])->name('download');
+    });
 });
 
 /*
