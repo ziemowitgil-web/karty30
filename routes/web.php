@@ -56,19 +56,19 @@ Route::prefix('certificates')->name('certificates.')->middleware('auth')->group(
     Route::get('/', [CertificateController::class, 'index'])->name('index');
 
     // Podgląd certyfikatu użytkownika
-    Route::get('/{userId}/details', [CertificateController::class, 'details'])->name('details');
+    Route::get('/{userId}/details', [CertificateController::class, 'certificateDetailsView'])->name('details');
 
     // Pobranie certyfikatu / klucza
     Route::get('/{userId}/download/{type}', [CertificateController::class, 'download'])->name('download');
 
     // Wygenerowanie nowego certyfikatu dla użytkownika
-    Route::get('/{userId}/generate', [CertificateController::class, 'showGenerateForm'])->name('generate.form');
-    Route::post('/{userId}/generate', [CertificateController::class, 'generate'])->name('generate');
+    Route::get('/generate', [CertificateController::class, 'generateView'])->name('generate'); // formularz
+    Route::post('/generate/{userId}', [CertificateController::class, 'generateCertificate'])->name('generate.submit'); // akcja generowania
 
     // Cofnięcie/revokacja certyfikatu
-    Route::post('/{userId}/revoke', [CertificateController::class, 'revoke'])->name('revoke');
-});
+    Route::post('/{userId}/revoke', [CertificateController::class, 'revokeCertificate'])->name('revoke');
 
+    });
 /*
 |--------------------------------------------------------------------------
 | PANEL UŻYTKOWNIKA (pusta sekcja do rozbudowy)

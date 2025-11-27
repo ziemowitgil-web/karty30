@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/**
- * Kontroler obsługujący certyfikaty X.509 użytkowników.
- */
 class CertificateController extends Controller
 {
     protected string $path;
@@ -35,16 +32,9 @@ class CertificateController extends Controller
      */
     public function index()
     {
-        public function indexView()
-    {
-        try {
-            return view('certifications.index');
-        } catch (\Throwable $e) {
-            dd('Błąd ładowania widoku: ' . $e->getMessage(), $e->getTrace());
-        }
+        // Panel certyfikatów uruchamia się zawsze
+        return view('certifications.index');
     }
-        }
-
 
     /**
      * Widok formularza generowania certyfikatu.
@@ -93,22 +83,27 @@ class CertificateController extends Controller
         $certPath = "{$this->path}/{$userId}_cert.pem";
         openssl_x509_export_to_file($cert, $certPath);
 
-        return redirect()->route('certificates.details', ['userId' => $userId])
+        return redirect()->route('certificates.index')
             ->with('success', 'Certyfikat został wygenerowany.');
     }
 
     /**
      * Widok szczegółów certyfikatu użytkownika.
      */
-    public function getUserCertificate(int $userId): array
+    public function certificateDetailsView(int $userId)
     {
-        $certPath = "{$this->path}/{$userId}_cert.pem";
-        $keyPath = "{$this->path}/{$userId}_key.pem";
+        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
 
-        return [
-            'cert' => File::exists($certPath) ? $certPath : null,
-            'key' => File::exists($keyPath) ? $keyPath : null,
-        ];
+        // Jeśli certyfikatu nie ma, przekieruj do index
+        if (!$certPath || !$keyPath) {
+            return redirect()->route('certificates.index')
+                ->with('error', 'Certyfikat nie został jeszcze wygenerowany.');
+        }
+
+        $certContent = File::get($certPath);
+        $certInfo = openssl_x509_parse($certContent);
+
+        return view('certifications.details', compact('certPath', 'keyPath', 'certInfo'));
     }
 
     /**
@@ -136,8 +131,8 @@ class CertificateController extends Controller
     {
         ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
 
-        $deletedCert = File::delete($certPath);
-        $deletedKey = File::delete($keyPath);
+        $deletedCert = $certPath ? File::delete($certPath) : false;
+        $deletedKey = $keyPath ? File::delete($keyPath) : false;
 
         return redirect()->route('certificates.index')
             ->with('success', $deletedCert && $deletedKey ? 'Certyfikat został cofnięty.' : 'Błąd przy cofaniu certyfikatu.');
@@ -145,19 +140,16 @@ class CertificateController extends Controller
 
     /**
      * Pobiera ścieżki certyfikatu i klucza użytkownika.
+     * Jeśli certyfikat nie istnieje, zwraca null.
      */
     public function getUserCertificate(int $userId): array
     {
         $certPath = "{$this->path}/{$userId}_cert.pem";
         $keyPath = "{$this->path}/{$userId}_key.pem";
 
-        if (!File::exists($certPath) || !File::exists($keyPath)) {
-            abort(404, 'Certyfikat lub klucz prywatny nie istnieje.');
-        }
-
         return [
-            'cert' => $certPath,
-            'key' => $keyPath,
+            'cert' => File::exists($certPath) ? $certPath : null,
+            'key' => File::exists($keyPath) ? $keyPath : null,
         ];
     }
 }
