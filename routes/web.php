@@ -68,7 +68,7 @@ Route::prefix('certificates')->name('certificates.')->middleware('auth')->group(
     // Cofnięcie/revokacja certyfikatu
     Route::post('/{userId}/revoke', [CertificateController::class, 'revokeCertificate'])->name('revoke');
 
-    });
+            });
 /*
 |--------------------------------------------------------------------------
 | PANEL UŻYTKOWNIKA (pusta sekcja do rozbudowy)

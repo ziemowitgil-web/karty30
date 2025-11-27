@@ -27,26 +27,16 @@ class CertificateController extends Controller
         }
     }
 
-    /**
-     * Widok panelu certyfikatów.
-     */
     public function index()
     {
-        // Panel certyfikatów uruchamia się zawsze
         return view('certifications.index');
     }
 
-    /**
-     * Widok formularza generowania certyfikatu.
-     */
     public function generateView(): \Illuminate\View\View
     {
         return view('certifications.generate');
     }
 
-    /**
-     * Generuje certyfikat X.509 dla użytkownika.
-     */
     public function generateCertificate(Request $request, int $userId)
     {
         $request->validate([
@@ -87,17 +77,18 @@ class CertificateController extends Controller
             ->with('success', 'Certyfikat został wygenerowany.');
     }
 
-    /**
-     * Widok szczegółów certyfikatu użytkownika.
-     */
     public function certificateDetailsView(int $userId)
     {
-        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
+        $certificates = $this->getUserCertificate($userId);
+        $certPath = $certificates['cert'];
+        $keyPath = $certificates['key'];
 
-        // Jeśli certyfikatu nie ma, przekieruj do index
         if (!$certPath || !$keyPath) {
-            return redirect()->route('certificates.index')
-                ->with('error', 'Certyfikat nie został jeszcze wygenerowany.');
+            return view('certifications.details')
+                ->with('error', 'Certyfikat nie został jeszcze wygenerowany.')
+                ->with('certPath', null)
+                ->with('keyPath', null)
+                ->with('certInfo', null);
         }
 
         $certContent = File::get($certPath);
@@ -106,12 +97,11 @@ class CertificateController extends Controller
         return view('certifications.details', compact('certPath', 'keyPath', 'certInfo'));
     }
 
-    /**
-     * Pobiera certyfikat lub klucz prywatny użytkownika.
-     */
     public function download(int $userId, string $type): StreamedResponse
     {
-        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
+        $certificates = $this->getUserCertificate($userId);
+        $certPath = $certificates['cert'];
+        $keyPath = $certificates['key'];
 
         $file = match($type) {
             'cert' => $certPath,
@@ -119,17 +109,16 @@ class CertificateController extends Controller
             default => null
         };
 
-        if (!$file) abort(404, 'Niepoprawny typ pliku.');
+        if (!$file) abort(404, 'Niepoprawny typ pliku lub plik nie istnieje.');
 
         return response()->download($file);
     }
 
-    /**
-     * Cofnięcie certyfikatu użytkownika.
-     */
     public function revokeCertificate(int $userId)
     {
-        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
+        $certificates = $this->getUserCertificate($userId);
+        $certPath = $certificates['cert'];
+        $keyPath = $certificates['key'];
 
         $deletedCert = $certPath ? File::delete($certPath) : false;
         $deletedKey = $keyPath ? File::delete($keyPath) : false;
@@ -138,10 +127,6 @@ class CertificateController extends Controller
             ->with('success', $deletedCert && $deletedKey ? 'Certyfikat został cofnięty.' : 'Błąd przy cofaniu certyfikatu.');
     }
 
-    /**
-     * Pobiera ścieżki certyfikatu i klucza użytkownika.
-     * Jeśli certyfikat nie istnieje, zwraca null.
-     */
     public function getUserCertificate(int $userId): array
     {
         $certPath = "{$this->path}/{$userId}_cert.pem";
