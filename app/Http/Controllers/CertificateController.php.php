@@ -100,14 +100,15 @@ class CertificateController extends Controller
     /**
      * Widok szczegółów certyfikatu użytkownika.
      */
-    public function certificateDetailsView(int $userId)
+    public function getUserCertificate(int $userId): array
     {
-        ['cert' => $certPath, 'key' => $keyPath] = $this->getUserCertificate($userId);
+        $certPath = "{$this->path}/{$userId}_cert.pem";
+        $keyPath = "{$this->path}/{$userId}_key.pem";
 
-        $certContent = File::get($certPath);
-        $certInfo = openssl_x509_parse($certContent);
-
-        return view('certifications.details', compact('certPath', 'keyPath', 'certInfo'));
+        return [
+            'cert' => File::exists($certPath) ? $certPath : null,
+            'key' => File::exists($keyPath) ? $keyPath : null,
+        ];
     }
 
     /**
