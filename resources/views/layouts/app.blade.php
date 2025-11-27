@@ -107,12 +107,12 @@
     @endphp
     <div class="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0 text-sm">
         <div class="flex flex-col space-y-1 text-center md:text-left">
-            <span class="font-semibold">&copy; {{ date('Y') }} {{ config('app.name', 'Karty 3.0') }}</span>
-            <span class="text-gray-400">Wersja aplikacji: {{ env('APP_VERSION', 'DEV') }}</span>
-            <span class="text-gray-400">Commit: {{ $gitCommit }}</span>
+            <span class="font-semibold text-white">&copy; {{ date('Y') }} {{ config('app.name', 'Karty 3.0') }}</span>
+            <span class="text-gray-300">Wersja aplikacji: {{ env('APP_VERSION', 'DEV') }}</span>
+            <span class="text-gray-300 font-mono">Commit: {{ $gitCommit }}</span>
         </div>
-        <div class="flex flex-col md:flex-row items-center gap-2 md:gap-4">
-            <div class="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white text-center">
+        <div class="flex flex-col md:flex-row items-center gap-2 md:gap-4 mt-2 md:mt-0">
+            <div class="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white text-center shadow">
                 Środowisko: {{ strtoupper(env('APP_ENV', 'LOCAL')) }}
             </div>
             <div class="text-gray-400 text-xs text-center md:text-left">
@@ -121,5 +121,6 @@
         </div>
     </div>
 </footer>
+
 </body>
 </html>
