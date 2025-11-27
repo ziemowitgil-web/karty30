@@ -36,6 +36,13 @@
             </div>
         </div>
 
+        <!-- Link do cennika zajęć -->
+        <div class="mb-6">
+            <a href="{{ route('costs.index') }}" class="text-blue-500 hover:underline text-lg font-medium">
+                Przejdź do cennika zajęć
+            </a>
+        </div>
+
         <!-- Ostatnie logi -->
         <div class="bg-white p-6 rounded-xl shadow">
             <h2 class="text-xl font-semibold mb-4">Ostatnie logi aktywności</h2>

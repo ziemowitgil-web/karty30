@@ -105,6 +105,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     // Certyfikaty serwera
     Route::get('/certificate/create', [AdminServiceController::class, 'showCertificateForm'])->name('certificate.form');
     Route::post('/certificate/generate', [AdminServiceController::class, 'generateServerCertificate'])->name('certificate.generate');
+
+    // Koszty i kalkulator
+    Route::get('/costs', [AdminServiceController::class, 'CostCalculatorView'])->name('costs.index');
+    Route::get('/CostCalculatorEdit/{id}', [AdminServiceController::class, 'CostCalculatorEdit'])
+        ->name('costs.edit');
 });
 
 /*

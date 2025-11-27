@@ -204,4 +204,36 @@ class AdminServiceController extends Controller
 
         return back()->with('success', "Certyfikat X.509 został wygenerowany.\nPlik certyfikatu: {$certPath}\nPlik klucza: {$privateKeyPath}");
     }
+
+    public function CostCalculatorEdit(Request $request, $id)
+    {
+        // Pobranie rekordu lub zwrócenie 404
+        $cost = \App\Models\CostAndInvoice::findOrFail($id);
+
+        // Liczba zajęć przesłana z requestu (domyślnie 1)
+        $numberOfClasses = $request->input('number_of_classes', 1);
+
+        // Wyliczenie kosztu zajęć
+        $calculatedCost = $cost->calculateCost($numberOfClasses);
+
+        // Zwracamy wszystkie dane do modalnego formularza
+        return response()->json([
+            'id' => $cost->id,
+            'name' => $cost->name,
+            'service' => $cost->service,
+            'classes_included' => $cost->classes_included,
+            'valid_from' => $cost->valid_from?->format('Y-m-d'),
+            'valid_to' => $cost->valid_to?->format('Y-m-d'),
+            'amount' => $cost->amount,
+            'mpp_number' => $cost->mpp_number,
+            'calculated_cost' => $calculatedCost
+        ]);
+    }
+
+    public function CostCalculatorView() {
+        $costs = \App\Models\CostAndInvoice::orderBy('id', 'asc')->get();
+        return view('AdminService.CostMgmt.index', compact('costs'));
+
+    }
+
 }
