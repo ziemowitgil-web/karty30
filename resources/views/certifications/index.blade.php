@@ -24,20 +24,33 @@
                 $userId = Auth::user()->id;
                 $certFile = storage_path("app/certifications/{$userId}_cert.pem");
                 $keyFile = storage_path("app/certifications/{$userId}_key.pem");
-                $certExists = file_exists($certFile);
+                $certExists = file_exists($certFile) && is_readable($certFile);
+                $certInfo = null;
+                $validUntil = null;
+
+                if ($certExists) {
+                    try {
+                        $certContent = file_get_contents($certFile);
+                        if ($certContent) {
+                            $certInfo = openssl_x509_parse($certContent);
+                            if (isset($certInfo['validTo_time_t'])) {
+                                $validUntil = date('d.m.Y', $certInfo['validTo_time_t']);
+                            }
+                        } else {
+                            $certExists = false;
+                        }
+                    } catch (\Exception $e) {
+                        $certExists = false;
+                    }
+                }
             @endphp
 
-            @if($certExists)
-                @php
-                    $certContent = file_get_contents($certFile);
-                    $certInfo = openssl_x509_parse($certContent);
-                    $validUntil = isset($certInfo['validTo_time_t']) ? date('d.m.Y', $certInfo['validTo_time_t']) : '-';
-                @endphp
+            @if($certExists && $certInfo)
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                     <div>
                         <p><strong>CN:</strong> {{ $certInfo['subject']['CN'] ?? 'Nieznany' }}</p>
                         <p><strong>O:</strong> {{ $certInfo['subject']['O'] ?? '-' }}</p>
-                        <p><strong>Ważny do:</strong> {{ $validUntil }}</p>
+                        <p><strong>Ważny do:</strong> {{ $validUntil ?? '-' }}</p>
                     </div>
                     <div class="flex gap-2">
                         <a href="{{ route('certificates.download', ['userId' => $userId, 'type' => 'cert']) }}"

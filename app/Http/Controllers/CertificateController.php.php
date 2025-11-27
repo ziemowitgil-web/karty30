@@ -27,16 +27,19 @@ class CertificateController extends Controller
         }
     }
 
+    /** Widok panelu certyfikatów */
     public function index()
     {
         return view('certifications.index');
     }
 
+    /** Widok formularza generowania certyfikatu */
     public function generateView(): \Illuminate\View\View
     {
         return view('certifications.generate');
     }
 
+    /** Generowanie certyfikatu X.509 dla użytkownika */
     public function generateCertificate(Request $request, int $userId)
     {
         $request->validate([
@@ -54,54 +57,72 @@ class CertificateController extends Controller
 
         $password = $request->key_password;
 
-        $privateKey = openssl_pkey_new([
-            'private_key_type' => OPENSSL_KEYTYPE_RSA,
-            'private_key_bits' => 2048,
-        ]);
+        try {
+            $privateKey = openssl_pkey_new([
+                'private_key_type' => OPENSSL_KEYTYPE_RSA,
+                'private_key_bits' => 2048,
+            ]);
 
-        $keyPath = "{$this->path}/{$userId}_key.pem";
-        openssl_pkey_export_to_file($privateKey, $keyPath, $password);
+            if (!$privateKey) {
+                return back()->with('error', 'Błąd podczas generowania klucza prywatnego.');
+            }
 
-        $dnUser = array_merge($this->dn, [
-            'commonName' => Auth::user()->name,
-            'emailAddress' => Auth::user()->email,
-        ]);
+            $keyPath = "{$this->path}/{$userId}_key.pem";
+            openssl_pkey_export_to_file($privateKey, $keyPath, $password);
 
-        $csr = openssl_csr_new($dnUser, $privateKey);
-        $cert = openssl_csr_sign($csr, null, $privateKey, $this->validDays);
+            $dnUser = array_merge($this->dn, [
+                'commonName' => Auth::user()->name,
+                'emailAddress' => Auth::user()->email,
+            ]);
 
-        $certPath = "{$this->path}/{$userId}_cert.pem";
-        openssl_x509_export_to_file($cert, $certPath);
+            $csr = openssl_csr_new($dnUser, $privateKey);
+            $cert = openssl_csr_sign($csr, null, $privateKey, $this->validDays);
+
+            if (!$cert) {
+                return back()->with('error', 'Błąd podczas generowania certyfikatu.');
+            }
+
+            $certPath = "{$this->path}/{$userId}_cert.pem";
+            openssl_x509_export_to_file($cert, $certPath);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Wystąpił błąd: ' . $e->getMessage());
+        }
 
         return redirect()->route('certificates.index')
             ->with('success', 'Certyfikat został wygenerowany.');
     }
 
+    /** Widok szczegółów certyfikatu użytkownika */
     public function certificateDetailsView(int $userId)
     {
         $certificates = $this->getUserCertificate($userId);
-        $certPath = $certificates['cert'];
-        $keyPath = $certificates['key'];
 
-        if (!$certPath || !$keyPath) {
-            return view('certifications.details')
-                ->with('error', 'Certyfikat nie został jeszcze wygenerowany.')
-                ->with('certPath', null)
-                ->with('keyPath', null)
-                ->with('certInfo', null);
+        $certPath = $certificates['cert'] ?? null;
+        $keyPath = $certificates['key'] ?? null;
+        $certInfo = null;
+        $error = null;
+
+        if ($certPath && File::exists($certPath)) {
+            try {
+                $certContent = File::get($certPath);
+                $certInfo = openssl_x509_parse($certContent);
+            } catch (\Exception $e) {
+                $error = 'Nie udało się odczytać certyfikatu.';
+            }
+        } else {
+            $error = 'Certyfikat nie został jeszcze wygenerowany.';
         }
 
-        $certContent = File::get($certPath);
-        $certInfo = openssl_x509_parse($certContent);
-
-        return view('certifications.details', compact('certPath', 'keyPath', 'certInfo'));
+        return view('certifications.details', compact('certPath', 'keyPath', 'certInfo', 'error'));
     }
 
+    /** Pobieranie certyfikatu lub klucza */
     public function download(int $userId, string $type): StreamedResponse
     {
         $certificates = $this->getUserCertificate($userId);
-        $certPath = $certificates['cert'];
-        $keyPath = $certificates['key'];
+        $certPath = $certificates['cert'] ?? null;
+        $keyPath = $certificates['key'] ?? null;
 
         $file = match($type) {
             'cert' => $certPath,
@@ -109,24 +130,31 @@ class CertificateController extends Controller
             default => null
         };
 
-        if (!$file) abort(404, 'Niepoprawny typ pliku lub plik nie istnieje.');
+        if (!$file || !File::exists($file)) {
+            abort(404, 'Plik nie istnieje.');
+        }
 
         return response()->download($file);
     }
 
+    /** Cofnięcie certyfikatu */
     public function revokeCertificate(int $userId)
     {
         $certificates = $this->getUserCertificate($userId);
-        $certPath = $certificates['cert'];
-        $keyPath = $certificates['key'];
+        $certPath = $certificates['cert'] ?? null;
+        $keyPath = $certificates['key'] ?? null;
 
         $deletedCert = $certPath ? File::delete($certPath) : false;
         $deletedKey = $keyPath ? File::delete($keyPath) : false;
 
-        return redirect()->route('certificates.index')
-            ->with('success', $deletedCert && $deletedKey ? 'Certyfikat został cofnięty.' : 'Błąd przy cofaniu certyfikatu.');
+        $message = ($deletedCert && $deletedKey)
+            ? 'Certyfikat został cofnięty.'
+            : 'Nie znaleziono certyfikatu do cofnięcia.';
+
+        return redirect()->route('certificates.index')->with('success', $message);
     }
 
+    /** Pobiera ścieżki certyfikatu i klucza użytkownika */
     public function getUserCertificate(int $userId): array
     {
         $certPath = "{$this->path}/{$userId}_cert.pem";
